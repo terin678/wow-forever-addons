@@ -12,7 +12,7 @@ Addons for WoW Forever (client 1.60.1, interface
 
 ## Install
 
-Extract the zips into `_classic_beta_\Interface\AddOns` so you get
+Extract the zips into `_forever_\Interface\AddOns` so you get
 `AddOns\ICKit\ICKit.toc` and so on, then restart the client. ICKit is required by the others.
 
 ## Working on it
