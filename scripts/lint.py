@@ -1,0 +1,355 @@
+"""Mechanical checks for the addons in this repo.
+
+    python scripts/lint.py            every addon
+    python scripts/lint.py TradeMaster
+
+There is no Lua on this machine, so these are the errors that can be caught without
+running the game. Each check is here because it shipped broken at least once.
+"""
+
+import io
+import os
+import re
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECTS = os.path.join(ROOT, "AddonProjects")
+
+# Interface\Buildings\White8x8 does not resolve on this client: every frame using it
+# draws with no fill at all, and nothing errors. See client-api.md.
+BAD_TEXTURES = [
+    r"Interface\\+Buildings\\+White8x8",
+]
+
+findings = []
+
+
+def note(path, line, message):
+    try:
+        rel = os.path.relpath(path, ROOT).replace("\\", "/")
+    except ValueError:
+        # A different drive has no relative path from the repo on Windows.
+        rel = path.replace("\\", "/")
+    findings.append("%s:%d  %s" % (rel, line, message))
+
+
+def line_of(text, index):
+    return text.count("\n", 0, index) + 1
+
+
+def in_comment(text, index):
+    """True when the match sits on a line that starts with --.
+
+    Documentation naming a banned pattern is not a use of it: this repo's own
+    note about the dead texture path was the first thing the check found.
+    """
+    start = text.rfind("\n", 0, index) + 1
+    return text[start:index].lstrip().startswith("--")
+
+
+def lua_files(folder):
+    for name in sorted(os.listdir(folder)):
+        if name.endswith(".lua"):
+            yield os.path.join(folder, name)
+
+
+def check_parses(path, src):
+    try:
+        from luaparser import ast
+    except ImportError:
+        return
+    try:
+        ast.parse(src)
+    except Exception as exc:  # noqa: BLE001 - any parse failure is a finding
+        note(path, 1, "does not parse: %s" % str(exc).split("\n")[0])
+
+
+SELF_REF = re.compile(r"\blocal\s+([A-Za-z_]\w*)\s*=\s*[^\n=]*?\(")
+
+
+def check_self_reference(path, src):
+    """local X = f(... X:something ...) reads a nil global.
+
+    The local does not exist until the assignment finishes, so a callback written
+    inside the call captures the global of the same name. This shipped as
+    "attempt to index global 't'" the first time anyone clicked an order.
+    """
+    for m in SELF_REF.finditer(src):
+        name = m.group(1)
+        i, depth = m.end() - 1, 0
+        while i < len(src):
+            if src[i] == "(":
+                depth += 1
+            elif src[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        body = src[m.end():i]
+        if in_comment(src, m.start()):
+            continue
+        # A field access (frame.count:GetText()) is a different name entirely.
+        if re.search(r"(?<![.:\w])%s\s*[:.]" % re.escape(name), body):
+            note(path, line_of(src, m.start()),
+                 "`local %s = ...` refers to %s inside its own call: that is a nil global"
+                 % (name, name))
+
+
+def check_unfinished_strings(path, src):
+    """A quoted string that runs past the end of its line.
+
+    Lua does not allow a raw newline inside "..." or '...'; the client refuses to
+    load the file with "unfinished string near ...". luaparser ACCEPTS it, so
+    check_parses above does not catch this and it reaches the game. It got there
+    once, from an editing script that turned an escaped \\n into a real one.
+
+    Long strings and long comments are skipped, because those may span lines.
+    """
+    i, n, line = 0, len(src), 1
+    while i < n:
+        c = src[i]
+
+        if c == "\n":
+            line += 1
+            i += 1
+            continue
+
+        # -- line comment, or --[[ long comment ]]
+        if src.startswith("--", i):
+            m = re.match(r"--\[(=*)\[", src[i:])
+            if m:
+                close = "]" + m.group(1) + "]"
+                end = src.find(close, i + m.end())
+                end = n if end < 0 else end + len(close)
+                line += src.count("\n", i, end)
+                i = end
+                continue
+            end = src.find("\n", i)
+            i = n if end < 0 else end
+            continue
+
+        # [[ long string ]], which is allowed to span lines
+        m = re.match(r"\[(=*)\[", src[i:])
+        if m:
+            close = "]" + m.group(1) + "]"
+            end = src.find(close, i + m.end())
+            end = n if end < 0 else end + len(close)
+            line += src.count("\n", i, end)
+            i = end
+            continue
+
+        if c in "\"'":
+            j = i + 1
+            while j < n:
+                if src[j] == "\\":
+                    # An escaped newline is a legal continuation; anything else
+                    # escaped is one character we simply step over.
+                    if j + 1 < n and src[j + 1] == "\n":
+                        line += 1
+                    j += 2
+                    continue
+                if src[j] == c or src[j] == "\n":
+                    break
+                j += 1
+            if j >= n or src[j] == "\n":
+                note(path, line,
+                     "a quoted string runs past the end of its line; Lua reports this "
+                     "as an unfinished string and refuses to load the file")
+            i = j + 1
+            continue
+
+        i += 1
+
+
+def check_textures(path, src):
+    for pattern in BAD_TEXTURES:
+        for m in re.finditer(pattern, src):
+            if in_comment(src, m.start()):
+                continue
+            note(path, line_of(src, m.start()),
+                 "texture path does not resolve on this client, frames draw with no fill")
+
+
+def toc_path(addon_dir):
+    name = os.path.basename(addon_dir)
+    return os.path.join(addon_dir, name + ".toc")
+
+
+def check_toc(addon_dir):
+    """Every top-level .lua is listed, every listed file exists, no Bindings.xml.
+
+    The client loads Bindings.xml by filename; listing it loads the bindings twice.
+    """
+    toc = toc_path(addon_dir)
+    if not os.path.exists(toc):
+        return
+    text = io.open(toc, encoding="utf-8").read()
+    listed = []
+    for i, raw in enumerate(text.splitlines(), 1):
+        entry = raw.strip()
+        if not entry or entry.startswith("#"):
+            continue
+        if entry.lower() == "bindings.xml":
+            note(toc, i, "Bindings.xml is loaded by filename; listing it loads it twice")
+            continue
+        listed.append((i, entry))
+        if not os.path.exists(os.path.join(addon_dir, entry.replace("\\", os.sep))):
+            note(toc, i, "listed file does not exist: %s" % entry)
+
+    top_level = set(e for _, e in listed if "\\" not in e and "/" not in e)
+    for path in lua_files(addon_dir):
+        name = os.path.basename(path)
+        if name not in top_level:
+            note(toc, 1, "%s is not listed, so the client never loads it" % name)
+
+
+VERSION_TOC = re.compile(r"^##\s*Version:\s*(.+)$", re.M)
+VERSION_LUA = re.compile(r'local\s+VERSION\s*=\s*"([^"]+)"')
+
+
+def check_versions(addon_dir):
+    """The .toc, the load message and the README table must agree.
+
+    Three places move together on a release and one of them gets forgotten. The zip name is
+    a fourth appearance but package.ps1 derives it from the .toc, so it cannot drift.
+    """
+    toc = toc_path(addon_dir)
+    if not os.path.exists(toc):
+        return
+    name = os.path.basename(addon_dir)
+    text = io.open(toc, encoding="utf-8").read()
+    m = VERSION_TOC.search(text)
+    if not m:
+        note(toc, 1, "no ## Version: line")
+        return
+    version = m.group(1).strip()
+
+    core = os.path.join(addon_dir, "Core.lua")
+    if os.path.exists(core):
+        src = io.open(core, encoding="utf-8").read()
+        lua = VERSION_LUA.search(src)
+        if lua and lua.group(1) != version:
+            note(core, line_of(src, lua.start()),
+                 "load message says %s, the .toc says %s" % (lua.group(1), version))
+
+    readme = os.path.join(os.path.dirname(addon_dir), "README.md")
+    if os.path.exists(readme):
+        src = io.open(readme, encoding="utf-8").read()
+        row = re.search(r"^\|\s*%s\s*\|\s*([^|]+?)\s*\|" % re.escape(name), src, re.M)
+        if row and row.group(1) != version:
+            note(readme, line_of(src, row.start()),
+                 "%s is listed as %s, the .toc says %s" % (name, row.group(1), version))
+
+
+LIB_MINOR = re.compile(r'local\s+MAJOR,\s*MINOR\s*=\s*"([^"]+)",\s*(\d+)')
+TOC_SAVED = re.compile(r"^##\s*SavedVariables(PerCharacter)?:", re.M)
+
+# The collaborator's addon. It has saved variables and no LibICCore, and it is not
+# ours to change; see SKILL.md.
+NOT_OURS = {"CutMaster"}
+
+# The library addons, one per code base: ICLibs under the Anniversary set, ICKit under
+# the Forever one. Each records its libraries' MINORs in Docs/<name>.md.
+LIB_ADDONS = ("ICLibs", "ICKit")
+
+# What boots an addon's saved variables: LibICCore's Attach, or the Forever store.
+CORE_LIBS = ("LibICCore-1.0", "LibICStore-1.0")
+
+
+def check_libs(flavor_dir, lib_addon="ICLibs"):
+    """Every LibIC* MINOR in the source is the one Docs/<library addon>.md records.
+
+    SKILL.md says to bump the MINOR on an API change and record it in the doc; the doc
+    was found a version behind, which is exactly the state that makes the rule useless.
+    """
+    libs_dir = os.path.join(flavor_dir, lib_addon)
+    doc = os.path.join(ROOT, "Docs", lib_addon + ".md")
+    if not os.path.isdir(libs_dir) or not os.path.exists(doc):
+        return
+    doc_src = io.open(doc, encoding="utf-8").read()
+    for name in sorted(os.listdir(libs_dir)):
+        if not name.startswith("LibIC"):
+            continue
+        path = os.path.join(libs_dir, name, name + ".lua")
+        if not os.path.exists(path):
+            continue
+        src = io.open(path, encoding="utf-8").read()
+        m = LIB_MINOR.search(src)
+        if not m:
+            note(path, 1, "no `local MAJOR, MINOR = ...` line")
+            continue
+        major, minor = m.group(1), m.group(2)
+        row = re.search(r"^\|\s*%s\s*\|\s*(\d+)\s*\|" % re.escape(major), doc_src, re.M)
+        if not row:
+            note(doc, 1, "no MINOR row for %s in the Contents table" % major)
+        elif row.group(1) != minor:
+            note(doc, line_of(doc_src, row.start()),
+                 "%s is listed at MINOR %s, the source says %s" % (major, row.group(1), minor))
+
+
+def check_core(addon_dir):
+    """An addon with saved variables boots them through LibICCore.
+
+    The library carries the load check that says whether the client handed the saved
+    variables back; an addon that bootstraps by hand has no such line and its first
+    symptom of a stale client is data gone.
+    """
+    toc = toc_path(addon_dir)
+    name = os.path.basename(addon_dir)
+    if name in NOT_OURS or not os.path.exists(toc):
+        return
+    if not TOC_SAVED.search(io.open(toc, encoding="utf-8").read()):
+        return
+    core = os.path.join(addon_dir, "Core.lua")
+    if not os.path.exists(core):
+        note(toc, 1, "declares saved variables but has no Core.lua to attach LibICCore in")
+        return
+    src = io.open(core, encoding="utf-8").read()
+    if not any(lib in src for lib in CORE_LIBS):
+        note(core, 1, "declares saved variables but does not boot them through "
+             + " or ".join(CORE_LIBS))
+
+
+def main(argv):
+    wanted = set(argv[1:])
+    checked = 0
+    for flavor in sorted(os.listdir(PROJECTS)):
+        flavor_dir = os.path.join(PROJECTS, flavor)
+        if not os.path.isdir(flavor_dir):
+            continue
+        for lib_addon in LIB_ADDONS:
+            if not wanted or lib_addon in wanted:
+                check_libs(flavor_dir, lib_addon)
+        for addon in sorted(os.listdir(flavor_dir)):
+            addon_dir = os.path.join(flavor_dir, addon)
+            if not os.path.isdir(addon_dir):
+                continue
+            if wanted and addon not in wanted:
+                continue
+            checked += 1
+            check_toc(addon_dir)
+            check_versions(addon_dir)
+            check_core(addon_dir)
+            for root, _, names in os.walk(addon_dir):
+                for name in sorted(names):
+                    if not name.endswith(".lua"):
+                        continue
+                    path = os.path.join(root, name)
+                    src = io.open(path, encoding="utf-8", errors="replace").read()
+                    check_parses(path, src)
+                    check_unfinished_strings(path, src)
+                    check_self_reference(path, src)
+                    check_textures(path, src)
+
+    if findings:
+        print("\n".join(findings))
+        print("\n%d finding%s across %d addon%s"
+              % (len(findings), "" if len(findings) == 1 else "s",
+                 checked, "" if checked == 1 else "s"))
+        return 1
+    print("clean: %d addon%s" % (checked, "" if checked == 1 else "s"))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
