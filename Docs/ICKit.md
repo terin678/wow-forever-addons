@@ -5,7 +5,7 @@ library addon: the Forever addons list it under `## Dependencies` and fetch what
 with LibStub. On its own it adds one command and nothing on screen.
 
 It is built bottom-up, one layer at a time. [forever/VISION.md](forever/VISION.md) has the
-rules and the order. It is a different code base from [ICLibs](ICLibs.md), which serves the
+rules and the order. It is a different code base from ICLibs (in [ic-addons](https://github.com/terin678/ic-addons)), which serves the
 TBC Anniversary addons, and the two are never installed on the same client.
 
 ## Install

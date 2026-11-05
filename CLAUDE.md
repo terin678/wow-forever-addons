@@ -1,85 +1,47 @@
-# ic-addons
+# wow-forever-addons
 
-Guild World of Warcraft addons. Read `CODING_STANDARDS.md` before changing any Lua.
+Impulse Control's addons for WoW Forever (interface 16001, client folder `_classic_beta_`).
+Read `CODING_STANDARDS.md` before changing any Lua, and `Docs/forever/VISION.md` before
+adding anything: this is built bottom-up, one layer at a time.
 
 ## Where things are
 
-- Addons: `AddonProjects/<flavor>/<AddonName>/`. Flavors: `era`, `anniversary`, `retail`, `forever` (the table is `scripts/flavors.psd1`).
-  The addon folder is exactly what ships.
-- User docs: `Docs/<AddonName>.md`. Update it whenever a command or tab changes.
-- Scripts: `scripts/new-addon.ps1` (scaffold from ICTemplate), `scripts/deploy.ps1`,
-  `scripts/package.ps1`, `scripts/release.ps1` (the CurseForge set, PowerShell 5.1),
-  `scripts/lint.py` (Python).
-- Skill for addon work: `.claude/skills/wow-addon-dev/SKILL.md`, and
-  `client-api.md` beside it — the client contracts that have already shipped broken here.
-  Read it before calling into the game.
+- Addons: `AddonProjects/forever/<AddonName>/`. The addon folder is exactly what ships.
+  `ICKit` is the library addon the others depend on.
+- User docs: `Docs/<AddonName>.md`. Update it whenever a command or panel changes.
+- What the client has been proven to do: `Docs/client-reference.md`.
+- Scripts: `scripts/deploy.ps1` (link an addon into the game folder), `scripts/package.ps1`
+  (zip it), `scripts/run-tests.ps1` (headless cases), `scripts/lint.py`. Flavor table:
+  `scripts/flavors.psd1`.
+- Skill for addon work: `.claude/skills/wow-addon-dev/SKILL.md` and `client-api.md`. Its
+  examples come from the Anniversary addons this code base grew out of (the repo
+  terin678/ic-addons); the client rules in it still apply.
 
 ## Git workflow
 
-- Never commit on `main`; it is protected and only accepts pull requests. Check
-  `git branch --show-current` before committing. If on `main`, create `feature/<topic>`
-  or `fix/<topic>` first.
-- Commit on the feature branch and push it. Open a PR with `gh pr create` when the user
-  asks for a merge; the template in `.github/` is the review checklist.
-- Merge with a merge commit (`gh pr merge --merge`), never a squash: each commit here is
-  written to stand on its own, and `main` keeps them so a single change can be found and
-  reverted on its own.
+- Never commit on `main`; work on `feature/<topic>` or `fix/<topic>` and open a PR.
+- Merge with a merge commit, never a squash: each commit is written to stand on its own.
+- Never commit `WTF/`, saved variables, or zips. Releases attach zips from `dist/`.
 
 ## Rules that matter most
 
-- Interface versions: anniversary is 20506 (TBC), forever is 16001 (WoW Forever, client folder `_classic_beta_`). Verify against an installed addon on the
-  client before changing; do not guess.
-- Client API calls that wait on the game must have timeouts and a cancel path. See the
-  scan state machine in `MalexisAuctionWatcher/Scanning.lua` for the pattern.
-- Optional dependencies (Auctionator, TSM) are always guarded and never required.
+- No client API is used until it is confirmed on this client (the in-game probe or the
+  exported source). Record what is confirmed in `Docs/client-reference.md`.
+- Modern first: where the client has a current mechanism and a legacy one, use the current
+  one. Grep `_classic_beta_\BlizzardInterfaceCode` for how the client does it.
+- Layers depend downward only; a library is added when an addon needs it.
+- Client API calls that wait on the game must have timeouts and a cancel path.
 - Bump the version in the `.toc`, the `Core.lua` load message and the row in
-  `AddonProjects/<flavor>/README.md` together. `lint.py` fails on any two disagreeing.
-- Never edit `CutMaster`; it belongs to a collaborator. Port upstream changes by hand into
-  TradeMaster instead — `SKILL.md` has the procedure.
-- Never commit `WTF/`, saved variables, or zips.
-- Editing a `.toc` needs a client restart. `/reload` does not re-read it, and a client that has been running across `.toc` edits can stop restoring one addon's account-wide saved variables while still restoring the per-character ones. The fingerprint is `/x log` saying `SAVED VARIABLES WERE EMPTY` with the per-character table intact. Restart the client before reading a line of addon code.
-- The plumbing every addon shares is `LibICCore-1.0` in ICLibs, installed by one
-  `Core:Attach` call in `Core.lua`. Do not add a Print, a bootstrap, a Util or a test
-  harness to an addon; `Docs/ICLibs.md` says what Attach installs.
+  `AddonProjects/forever/README.md` together. `lint.py` fails on any two disagreeing.
+- Editing a `.toc` needs a client restart. `/reload` does not re-read it.
 
 ## Verifying changes
 
-Four things, in order:
-
-1. `python scripts/lint.py`. It parses every file and catches what has actually shipped
-   broken: a local referenced inside its own assignment, a dead texture path, a `.toc` out
-   of step with the files on disk, a version that moved in one place but not the others,
-   and a quoted string running past its line -- which `luaparser` accepts and the client
-   refuses to load.
-2. `scripts/run-tests.ps1 -Flavor anniversary -Addon <Addon>`: the addon's cases under
-   LuaJIT against a stub client, in a second. Every addon with a `Tests.lua` runs; a
-   case that needs real widgets returns early on `IC_HEADLESS`. Run it after every edit
-   to a pure module, before `/reload`.
-3. The same cases in game, where the client is real: `/tm test`, `/cm test`, `/gr test`,
-   `/ictpl test`, `/maw test`, `/mfd selftest`. Anything worth arguing about belongs in
-   a pure function with a case here.
+1. `python scripts/lint.py`.
+2. `scripts/run-tests.ps1 -Flavor forever -Addon <Addon>`: the addon's cases under LuaJIT
+   against a stub client. A case that needs real widgets returns early on `IC_HEADLESS`.
+3. The same cases in game: `/ickit test`, `/stickies test`, `/tuner test`.
 4. The `wow-ui-reviewer` agent on every UI file touched.
-MarkedForDeath is built that way and its suite runs headlessly. A shell opened before the
-install will not have `luajit` on PATH; the script falls back to the `LOCALAPPDATA` path.
-Only modules that call no WoW API at file scope work this way -- caching a global into a
-local is fine, calling one is not -- so anything that creates a frame or reads client
-state does it in an init function registered from the addon's `Core.lua`.
 
-Then deploy, `/reload`, run the commands, check BugSack. State plainly in the summary that
-in-game checks were not run when that is the case.
-
-## Forever (`AddonProjects/forever`, interface 16001)
-
-A separate code base from the Anniversary set, built bottom-up. Read
-`Docs/forever/VISION.md` before adding anything there.
-
-- The library addon is `ICKit`, not `ICLibs`. Do not copy LibICCore or LibICUI across;
-  lift a proven pure function into the right ICKit library when a layer needs it.
-- Layers depend downward only, and a library is added when an addon needs it.
-- No client API is used until it is confirmed on this client (the in-game probe or
-  exported source). Record what is confirmed in `Docs/client-reference.md`.
-- Modern first: where the client has a current mechanism and a legacy one, use the
-  current one. Grep `_classic_beta_\BlizzardInterfaceCode` for how the client does it.
-- An addon keeps its case registry at `ns.Tests` (from `LibICTest-1.0`); run it with
-  `scripts/run-tests.ps1 -Flavor forever -Addon <Addon>`.
-- `scripts/new-addon.ps1` refuses this flavor until a Forever template exists.
+Then deploy, restart or `/reload`, run the commands, check BugSack. Say plainly when
+in-game checks were not run.
