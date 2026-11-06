@@ -17,6 +17,7 @@ jobs:
       WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
       CF_PROJECT_ID: ${{ vars.CF_PROJECT_ID }}
       CF_GAME_VERSION_IDS: ${{ vars.CF_GAME_VERSION_IDS }}
+      CF_GAME_VERSION: ${{ vars.CF_GAME_VERSION }}
       WAGO_PROJECT_ID: ${{ vars.WAGO_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
@@ -52,13 +53,18 @@ jobs:
       - name: CurseForge
         if: ${{ env.CF_API_TOKEN != '' && env.CF_PROJECT_ID != '' }}
         run: |
-          if [ -z "$CF_GAME_VERSION_IDS" ]; then
-            echo "Set the repo variable CF_GAME_VERSION_IDS to the id of the Forever game version. The candidates:"
-            curl -fsS -H "X-Api-Token: $CF_API_TOKEN" https://wow.curseforge.com/api/game/versions \
-              | jq -r '.[] | select(.name | test("forever|1\.60|camelot"; "i")) | "\(.id)\t\(.name)"'
-            exit 1
+          # The game version is found by its name, 1.60.1, unless CF_GAME_VERSION_IDS says which ids.
+          ids="$CF_GAME_VERSION_IDS"
+          if [ -z "$ids" ]; then
+            versions=$(curl -fsS -H "X-Api-Token: $CF_API_TOKEN" https://wow.curseforge.com/api/game/versions)
+            ids=$(jq -r --arg n "${CF_GAME_VERSION:-1.60.1}" '[.[] | select(.name == $n) | .id] | join(",")' <<< "$versions")
+            case "$ids" in
+              ""|*,*) echo "Wanted exactly one CurseForge game version named ${CF_GAME_VERSION:-1.60.1}, found: '$ids'. Candidates:"
+                      jq -r '.[] | select(.name | test("forever|1\\.60|camelot"; "i")) | "\(.id) \(.name)"' <<< "$versions"
+                      exit 1 ;;
+            esac
           fi
-          meta=$(jq -n --rawfile c notes.md --arg n "RenderTuner $VERSION" --argjson g "[$CF_GAME_VERSION_IDS]" \
+          meta=$(jq -n --rawfile c notes.md --arg n "RenderTuner $VERSION" --argjson g "[$ids]" \
             '{changelog: $c, changelogType: "markdown", displayName: $n, gameVersions: $g, releaseType: "release"}')
           curl -fsS -H "X-Api-Token: $CF_API_TOKEN" -F "metadata=$meta" -F "file=@$ZIP" \
             "https://wow.curseforge.com/api/projects/$CF_PROJECT_ID/upload-file"
