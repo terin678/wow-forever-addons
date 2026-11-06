@@ -20,7 +20,7 @@ the tag and `RenderTuner.toc` disagree, or if lint or a test fails.
 | --- | --- | --- |
 | `CF_API_TOKEN` | secret | CurseForge, the authors site, API Tokens |
 | `CF_PROJECT_ID` | variable | The number in "About Project" on the CurseForge page |
-| `CF_GAME_VERSION_IDS` | variable | The id of the Forever game version. Leave it empty on the first tag: the job lists the candidates from CurseForge and stops |
+| `CF_GAME_VERSION_IDS` | variable | Optional. CurseForge ids to use instead of looking up the game version named 1.60.1 (set `CF_GAME_VERSION` to look up another name) |
 | `WAGO_API_TOKEN` | secret | Wago developer portal, API keys |
 | `WAGO_PROJECT_ID` | variable | The project's id on the Wago developer dashboard |
 
