@@ -1,0 +1,72 @@
+# Pushing a tag such as rendertuner-v0.4.0 tests RenderTuner, zips it with ICKit, and
+# publishes the zip to GitHub, CurseForge and Wago. Docs/releasing.md has the one-time setup.
+name: Release RenderTuner
+
+on:
+  push:
+    tags: ["rendertuner-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      CF_PROJECT_ID: ${{ vars.CF_PROJECT_ID }}
+      CF_GAME_VERSION_IDS: ${{ vars.CF_GAME_VERSION_IDS }}
+      WAGO_PROJECT_ID: ${{ vars.WAGO_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The tag, the TOC and the version agree
+        run: |
+          version="${GITHUB_REF_NAME#rendertuner-v}"
+          toc=$(sed -n 's/^## Version:[[:space:]]*//p' AddonProjects/forever/RenderTuner/RenderTuner.toc | tr -d '\r')
+          [ "$version" = "$toc" ] || { echo "tag says $version, RenderTuner.toc says $toc"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Lint and test
+        run: |
+          sudo apt-get install -y luajit
+          python3 scripts/lint.py
+          for addon in ICKit RenderTuner; do luajit scripts/test-harness.lua "AddonProjects/forever/$addon"; done
+
+      - name: Zip RenderTuner with ICKit
+        run: |
+          zip="RenderTuner-$VERSION-forever.zip"
+          (cd AddonProjects/forever && zip -rq "$GITHUB_WORKSPACE/$zip" RenderTuner ICKit)
+          echo "ZIP=$zip" >> "$GITHUB_ENV"
+          # The tag's message is the changelog; fetching again keeps an annotated tag's text.
+          git fetch --tags --force --quiet
+          notes=$(git for-each-ref "refs/tags/$GITHUB_REF_NAME" --format='%(contents)')
+          printf '%s\n' "${notes:-RenderTuner $VERSION}" > notes.md
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "$ZIP" --title "RenderTuner $VERSION" --notes-file notes.md
+
+      - name: CurseForge
+        if: ${{ env.CF_API_TOKEN != '' && env.CF_PROJECT_ID != '' }}
+        run: |
+          if [ -z "$CF_GAME_VERSION_IDS" ]; then
+            echo "Set the repo variable CF_GAME_VERSION_IDS to the id of the Forever game version. The candidates:"
+            curl -fsS -H "X-Api-Token: $CF_API_TOKEN" https://wow.curseforge.com/api/game/versions \
+              | jq -r '.[] | select(.name | test("forever|1\.60|camelot"; "i")) | "\(.id)\t\(.name)"'
+            exit 1
+          fi
+          meta=$(jq -n --rawfile c notes.md --arg n "RenderTuner $VERSION" --argjson g "[$CF_GAME_VERSION_IDS]" \
+            '{changelog: $c, changelogType: "markdown", displayName: $n, gameVersions: $g, releaseType: "release"}')
+          curl -fsS -H "X-Api-Token: $CF_API_TOKEN" -F "metadata=$meta" -F "file=@$ZIP" \
+            "https://wow.curseforge.com/api/projects/$CF_PROJECT_ID/upload-file"
+
+      - name: Wago
+        if: ${{ env.WAGO_API_TOKEN != '' && env.WAGO_PROJECT_ID != '' }}
+        run: |
+          meta=$(jq -n --rawfile c notes.md --arg l "$VERSION" \
+            '{label: $l, stability: "stable", changelog: $c, supported_forever_patch: "1.60.1"}')
+          curl -fsS -H "Authorization: Bearer $WAGO_API_TOKEN" -H "Accept: application/json" \
+            -F "metadata=$meta" -F "file=@$ZIP" "https://addons.wago.io/api/projects/$WAGO_PROJECT_ID/version"
