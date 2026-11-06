@@ -1,6 +1,6 @@
 # wow-forever-addons
 
-Impulse Control's addons for WoW Forever (interface 16001, client folder `_classic_beta_`).
+Impulse Control's addons for WoW Forever (interface 16001, client folder `_forever_`).
 Read `CODING_STANDARDS.md` before changing any Lua, and `Docs/forever/VISION.md` before
 adding anything: this is built bottom-up, one layer at a time.
 

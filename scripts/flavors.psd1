@@ -6,10 +6,10 @@
 #   Published  the addons that ship, in upload order (library first)
 #   Template   the addon new-addon.ps1 copies from; empty while the flavor has none
 @{
-    # WoW Forever. The beta installs as _classic_beta_; when the live client lands under
-    # another folder name, this is the one line to change.
+    # WoW Forever. The live client installs as _forever_ (the beta was _classic_beta_, which
+    # still holds the exported interface source). This is the one line to change.
     forever = @{
-        Folder = "_classic_beta_"; Interface = "16001"; Library = "ICKit"
+        Folder = "_forever_"; Interface = "16001"; Library = "ICKit"
         Published = @("ICKit", "Stickies", "RenderTuner"); Template = ""
     }
 }

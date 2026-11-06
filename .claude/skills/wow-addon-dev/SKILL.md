@@ -148,7 +148,7 @@ fail loudly in chat over ones that fail silently.
 ## Forever addons
 
 `AddonProjects/forever` targets WoW Forever (interface 16001, client folder
-`_classic_beta_`; `scripts/flavors.psd1` holds the mapping). It is a separate code base
+`_forever_`; `scripts/flavors.psd1` holds the mapping). It is a separate code base
 built bottom-up on the library addon `ICKit`, not on ICLibs. Read
 `Docs/forever/VISION.md` first, then `Docs/ICKit.md` for what exists.
 
