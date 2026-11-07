@@ -8,11 +8,17 @@ it (Docs/forever/VISION.md has the rules and the order):
 
     layer 0   LibICUtil-1.0     pure helpers
               LibICTest-1.0     the case runner
+              LibICJSON-1.0     JSON text to and from tables
     layer 1   LibICEnv-1.0      what this client offers, and what the addons cost it
+              LibICRestrict-1.0 what the client will not let an addon do or read now
+              LibICGroup-1.0    who is in the group, read once as plain values
+              LibICChat-1.0     lines said in chat, sent only when the client will take them
+              LibICComm-1.0     addon messages between players running the same addon
               LibICStore-1.0    saved variables
               LibICConsole-1.0  printing and slash commands
               LibICTheme-1.0    the theme registry
     layer 2   LibICWidgets-1.0  themed frames
+              LibICSecure-1.0   secure buttons the player presses, changed only out of combat
 
 This file is the addon around the libraries: its version, its saved tables, its commands,
 and the theme every addon on the kit is drawn in. The libraries never print; what the kit
@@ -23,7 +29,7 @@ says, it says here.
     Tests.lua     the kit's own cases
 ]]
 
-local VERSION = "0.5.0"
+local VERSION = "0.13.1"
 
 local Util = LibStub("LibICUtil-1.0")
 local Test = LibStub("LibICTest-1.0")

@@ -439,6 +439,148 @@ function Model.LevelOf(level, levels, live, refused)
     return nil
 end
 
+-- The quality preset the client recommends for this machine: its default overall level
+-- (`defaultLevel`), taken to the highest preset without extras at or below it. Returns the
+-- preset, and whether its level is exactly the recommended one; nothing for no level.
+function Model.Recommended(defaultLevel, levels)
+    local level = tonumber(defaultLevel)
+    if not level then return nil end
+    local best
+    for _, preset in ipairs(levels) do
+        if not preset.also and preset.level <= level + 1e-9 and (not best or preset.level > best.level) then
+            best = preset
+        end
+    end
+    return best, best ~= nil and Model.Same(best.level, level)
+end
+
+-- The line under the rows when nothing is under the pointer: the usual hint, led by the
+-- client's recommendation while the settings are at some other quality preset.
+function Model.Hint(base, recommended, exact, current, defaultLevel)
+    if not recommended or recommended == current then return base end
+    local text = string.format("The game recommends quality level %d of 10 for this machine; %s %s. ",
+        math.floor(defaultLevel + 1.5), recommended.label, exact and "uses it" or "is the closest")
+    return text .. base
+end
+
+-- What to say before Extreme when the frame rate is already low, or nil. `fps` of 0 is a
+-- client that gave no reading.
+function Model.ExtremeNote(fps, floor)
+    if not fps or fps <= 0 or fps >= floor then return nil end
+    return string.format("You are at %d fps now, and Extreme costs more.", math.floor(fps + 0.5))
+end
+
+--------------------------------------------------------------------------------
+-- The frame rate check
+--------------------------------------------------------------------------------
+
+Model.CHECK = { low = 40, high = 100 }   -- fps under which to step down, and from which to step up
+
+-- The middle reading of a list of numbers, or nil for none.
+function Model.Median(list)
+    if #list == 0 then return nil end
+    local sorted = { unpack(list) }
+    table.sort(sorted)
+    local mid = math.floor((#sorted + 1) / 2)
+    if #sorted % 2 == 1 then return sorted[mid] end
+    return (sorted[mid] + sorted[mid + 1]) / 2
+end
+
+-- Whether a reading is the client's limit on the frame rate while the game is not in front
+-- (useMaxFPSBk, maxFPSBk), not what the machine can do. The client gives an addon no way to
+-- ask whether the window has focus, so a reading at or just over that limit is taken as not
+-- measured: the limit is not always held to the frame.
+function Model.BackgroundCapped(fps, live)
+    local limit = live and tonumber(live.maxFPSBk)
+    return live ~= nil and live.useMaxFPSBk == 1 and limit ~= nil and limit > 0 and fps <= limit * 1.2
+end
+
+-- Whether to run the check at login. It runs the first time RenderTuner is used and then
+-- each time the player arrives at the client's defaults (as after "Client defaults"), not
+-- on every login at defaults. `settings` holds check = "off" to say never, checked, and
+-- checkedAtDefaults; `atDefaults` is whether the render scale and overall level are the
+-- client's. Returns whether it is due, and the new checkedAtDefaults to keep.
+function Model.CheckDue(settings, atDefaults)
+    local due = settings.check ~= "off" and (settings.checked == nil
+        or (atDefaults and settings.checkedAtDefaults ~= true))
+    return due, atDefaults and (settings.checkedAtDefaults == true or due) or false
+end
+
+-- What a frame rate says to do. `scale` is the live render scale and `level` the quality
+-- preset in force (nil for Extreme or a level in between). The step is one preset: down in
+-- upscaling, or down in quality when upscaling is at its lowest, when the frame rate is
+-- low; and up toward native, or up in quality, when there is room. Returns
+-- { kind = "low" | "fine" | "high" | "held", fps, axis = "scale" | "level", preset } with no
+-- axis or preset when there is nowhere to step. With vertical sync on (`vsync`) the game is
+-- held to the screen's refresh rate, so a frame rate that is not low says nothing about
+-- room: that is "held", with nothing to suggest.
+function Model.Advise(fps, scale, level, presets, levels, limits, vsync)
+    local function size(p) return Util.Clamp(p.scale, limits.min, limits.max) end
+    local plain = {}
+    for _, preset in ipairs(levels) do
+        if not preset.also then plain[#plain + 1] = preset end
+    end
+    local function levelStep(by)
+        for i, preset in ipairs(plain) do
+            if preset == level then return plain[i + by] end
+        end
+    end
+    local advice = { fps = fps, kind = "fine" }
+    if vsync and fps >= Model.CHECK.low then
+        advice.kind = "held"
+    elseif fps < Model.CHECK.low then
+        advice.kind = "low"
+        local best
+        for _, p in ipairs(presets) do
+            if size(p) < scale - 0.005 and (not best or size(p) > size(best)) then best = p end
+        end
+        if best then advice.axis, advice.preset = "scale", best
+        elseif levelStep(-1) then advice.axis, advice.preset = "level", levelStep(-1) end
+    elseif fps >= Model.CHECK.high then
+        advice.kind = "high"
+        local best
+        if scale < 1 - 0.005 then
+            for _, p in ipairs(presets) do
+                if size(p) > scale + 0.005 and (not best or size(p) < size(best)) then best = p end
+            end
+        end
+        if best then advice.axis, advice.preset = "scale", best
+        elseif levelStep(1) then advice.axis, advice.preset = "level", levelStep(1) end
+    end
+    return advice
+end
+
+-- The words for advice: a headline, the explanation, and the label of the button that
+-- takes it (nil when there is nothing to take).
+function Model.AdviseText(advice, limits)
+    local head = string.format("Your frame rate is %d fps.", math.floor(advice.fps + 0.5))
+    if advice.kind == "fine" then
+        return head, "That is comfortable at these settings. Nothing needs changing.", nil
+    end
+    if advice.kind == "held" then
+        return head, "Vertical sync is on, which holds the game to your screen's refresh rate, so this says "
+            .. "little about what your machine can do. Turn it off (Latency and frame rate, in the panel) and "
+            .. "check again to see how much room there is.", nil
+    end
+    local label = advice.preset and (advice.axis == "scale" and Model.PresetLabel(advice.preset, limits)
+        or advice.preset.label)
+    if advice.kind == "low" then
+        if not label then
+            return head, "That is low, and there is no lower preset to step down to. The panel has every "
+                .. "setting if you want to go further.", nil
+        end
+        local why = advice.axis == "scale"
+            and ("Drawing fewer pixels helps most: " .. label .. " upscaling is the next step down.")
+            or ("Quality " .. label .. " is one step down.")
+        return head, "That is low. " .. why, "Use " .. label
+    end
+    if not label then return head, "That leaves room, and the settings are at the top already.", nil end
+    local why = advice.axis == "scale"
+        and (label .. " draws more of the screen's pixels, for a sharper picture.")
+        or ("Quality " .. label .. " is one step up.")
+    return head, "That leaves room. " .. why, "Use " .. label
+end
+
 -- The text on a preset's button in the upscaling row: its name and the share of the
 -- screen's pixels it draws, as the client will take it.
 function Model.PresetLabel(preset, limits)
