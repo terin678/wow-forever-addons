@@ -68,6 +68,19 @@ local CHANGED = "changed"
 local PEEK_ALPHA = 0.08     -- while Peek is held
 local HOLD_ALPHA = 0.4      -- while a slider is held
 local HINT = "Click a setting's name for its saved value or the default. Click a number to type one."
+local LOW_FPS = 40              -- below this, Extreme says it will cost more
+local idleHint = HINT           -- the line under the rows with nothing under the pointer
+local hovering = false
+local recommended, exactly, defaultLevel  -- the client's own pick for this machine, found once
+
+-- The quality preset the client recommends: its default overall level is the machine's own.
+local function Recommendation()
+    if defaultLevel == nil then
+        defaultLevel = tonumber(ns.Apply.Defaults().graphicsQuality) or false
+        if defaultLevel then recommended, exactly = Model.Recommended(defaultLevel, Catalog.LEVELS) end
+    end
+    return recommended, exactly
+end
 
 local frame
 local notice                -- the warning shown before the panel
@@ -191,8 +204,9 @@ end
 local function ShowHelp(row)
     if not frame then return end
     local knob = row and row.knob
+    hovering = knob ~= nil
     if not knob then
-        frame.help:SetText(HINT)
+        frame.help:SetText(idleHint)
         return
     end
     local text = knob.help or ""
@@ -338,6 +352,7 @@ local function MoreMenu(owner)
                 .. "Revert brings the saved set back.", ns.Restore)
         end },
         { divider = true },
+        { text = "Check my frame rate", onClick = function() ns.Check.Start(true) end },
         { text = "Restart the graphics engine", onClick = ns.Restart },
     })
 end
@@ -449,7 +464,8 @@ local function Build()
         local live = ns.Apply.Live()
         if preset.experimental and Model.LevelOf(live.graphicsQuality, Catalog.LEVELS, live, ns.Excused) ~= preset then
             -- No popup to ask with: the warning is in the tooltip, so go on.
-            if not W.Confirm(EXTREME_WARNING, Go) then Go() end
+            local note = Model.ExtremeNote(ns.Apply.Framerate(), LOW_FPS)
+            if not W.Confirm((note and (note .. "\n\n") or "") .. EXTREME_WARNING, Go) then Go() end
         else
             Go()
         end
@@ -465,6 +481,13 @@ local function Build()
             tip:AddLine("Leaves upscaling alone. Puts the extras of Extreme back as they were, if it set them.",
                 0.7, 0.7, 0.7, true)
         end
+        local rec, exact = Recommendation()
+        if rec == preset then
+            tip:AddLine(exact and "The game's recommended level for this machine."
+                or "The closest to the game's recommended level for this machine.", 0.5, 1, 0.5, true)
+        end
+        local note = preset.experimental and Model.ExtremeNote(ns.Apply.Framerate(), LOW_FPS)
+        if note then tip:AddLine(note, 1, 0.5, 0.25, true) end
     end)
 
     -- Actions
@@ -502,8 +525,17 @@ local function Build()
     })
     p.search:SetPoint("LEFT", more, "RIGHT", 12, 0)
 
+    p.auto = W.Button(p, "Auto-set", 80, BUTTON_H, { onClick = function() ns.Check.Start(true, nil, true) end })
+    p.auto:SetPoint("TOPRIGHT", p, "TOPRIGHT", -PAD, actionsY)
+    W.Tooltip(p.auto, function(tip)
+        tip:AddLine("Auto-set")
+        tip:AddLine("Measures your frame rate for a few seconds, then takes one step: down if it is low, up "
+            .. "if there is room. With nothing to change, it says so. Stay where you are, out of combat.",
+            1, 1, 1, true)
+    end)
+
     p.restart = W.Button(p, "Restart graphics", 130, BUTTON_H, { kind = "danger", onClick = function() ns.Restart() end })
-    p.restart:SetPoint("TOPRIGHT", p, "TOPRIGHT", -PAD, actionsY)
+    p.restart:SetPoint("RIGHT", p.auto, "LEFT", -gap, 0)
     W.Tooltip(p.restart, function(tip)
         tip:AddLine("Restart graphics")
         tip:AddLine("A change you made shows only after the graphics engine restarts. The screen blinks.",
@@ -748,6 +780,10 @@ function Panel.Refresh()
         presetButtons[each.key]:SetLabel(Model.PresetLabel(each, limits))
     end
     local level = Model.LevelOf(live.graphicsQuality, Catalog.LEVELS, live, ns.Excused)
+    local rec, exact = Recommendation()
+    -- Said until the player has chosen a quality preset once; the button's tooltip keeps saying it.
+    idleHint = ns.db.settings.picked and HINT or Model.Hint(HINT, rec, exact, level, defaultLevel)
+    if not hovering then frame.help:SetText(idleHint) end
     for _, each in ipairs(Catalog.LEVELS) do
         local b = levelButtons[each.key]
         b:SetKind(each == level and "accent" or "normal")
@@ -758,7 +794,7 @@ function Panel.Refresh()
     local scale = Model.Find(knobs, "RenderScale")
     frame.status:SetText(Model.Brief(scale and Model.Format(scale, live.RenderScale) or "?", preset, changed))
     frame.save:SetKind(changed > 0 and "accent" or "normal")
-    frame.restart:SetShown(ns.pendingRestart == "gx" or ns.pendingRestart == "window")
+    frame.restart:SetShown(ns.pendingEngine ~= nil)
     Panel.Layout()
 end
 

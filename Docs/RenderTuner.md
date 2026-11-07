@@ -3,9 +3,11 @@
 The one place to tune WoW Forever's graphics: upscaling and quality presets, a live control
 for about 140 console variables, search, and a way back to what you had.
 
-**Version 0.4.0 has the floating panel and the commands**, an Extreme quality preset with
-the experimental extras, and a panel that can get out of the way of the world it tunes. The
-page in the game's Options window and the side-by-side comparison come next.
+**Version 0.4.1 has the floating panel and the commands**, an Extreme quality preset with
+the experimental extras, and a panel that can get out of the way of the world it tunes. It
+also says which quality level the game recommends for your machine, and warns before Extreme
+when your frame rate is already low, and measures your frame rate and suggests a preset. The page in the game's Options window and the
+side-by-side comparison come next.
 
 ## What the client can and cannot do
 
@@ -85,6 +87,12 @@ use in each is highlighted.
   upscaling alone. **Extreme**, at the right in orange, is Ultra and then everything the
   quality levels do not reach, turned all the way up (see below), after asking. Choosing a
   lower level puts those settings back as they were before Extreme.
+
+**The game's recommendation.** Until you pick a quality preset, the line under the rows says
+which level the client recommends for this machine (its own default for the overall level)
+and which button uses it, or is the closest. That button's tooltip says so from then on.
+If your frame rate is under 40 when you click Extreme, the question and the button's
+tooltip say so first.
 
 Clicking a preset brings the group it changes into view, so you see what it did. The two
 rows are independent: Potato upscaling with Ultra quality is a combination you can make.
@@ -186,6 +194,30 @@ ray tracing, is left alone and named. Before it changes anything it notes what e
 was; choosing a lower level puts them back as they were, exactly. If you tune one of them
 by hand after Extreme, the button no longer lights, and a lower level leaves them to you.
 
+## The frame rate check
+
+RenderTuner measures your frame rate for about six seconds (twelve readings, the middle one
+counts) and opens a window with the number and one suggestion, and a button that does it.
+
+- **Under 40 fps:** one step down. Upscaling first (Native to Quality 67%, and so on); once
+  upscaling is at its lowest, one quality level.
+- **100 fps or more:** one step up. Toward native first, then one quality level. Never up
+  to Extreme, which is asked for.
+- **In between:** the window says it is comfortable and offers nothing.
+- **Vertical sync on:** the game is held to your screen's refresh rate, so a frame rate that is
+  not low says nothing about room. The window says so and suggests turning it off to check.
+
+The automatic check does not believe a reading at the background frame rate limit (the game
+was behind another window); it looks again twice, half a minute apart, then leaves it to the
+next login. `/tuner check` is taken to be run with the game in front, and always stands.
+
+It runs by itself about ten seconds after login the first time RenderTuner is used, and
+again whenever the settings arrive at the client's defaults (for example after **More...**,
+Client defaults). Not on every login there, and never in combat. Tick **Do not check at
+login** in the window to stop the automatic check; `/tuner check` and **More..., Check my
+frame rate** always run it. The reading depends on where you stand, so stay in the world,
+somewhere typical.
+
 ## Saved, trial and original
 
 The settings that are live in the game are the only copy that matters. RenderTuner keeps
@@ -219,6 +251,7 @@ many settings differ from the saved set.
 | `/tuner defaults` | Sets everything to the client's defaults for this machine |
 | `/tuner restore` | Goes back to how things were before RenderTuner first ran |
 | `/tuner restart` | Restarts the graphics engine, for the few changes that need it |
+| `/tuner check` | Measures the frame rate for six seconds and opens a window with a suggestion |
 | `/tuner test` | Runs the built-in checks |
 
 `/tuner set` takes the value as `/tuner list` shows it: a number for a slider or a choice

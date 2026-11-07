@@ -194,7 +194,7 @@ Catalog.KNOBS = {
     { cvar = "CMAA2ExtraSharpness", label = "CMAA2 extra sharpness", group = "aa", kind = "toggle",
       help = "Keeps text and fine shapes crisper, with less smoothing." },
     { cvar = "MSAAQuality", label = "Multisample anti-aliasing", group = "aa", kind = "choice",
-      choices = { { 0, "None" }, { 1, "2x" }, { 2, "4x" }, { 3, "8x" } },
+      choices = { { 0, "None" }, { 1, "2x" }, { 2, "4x" }, { 3, "8x" } }, restart = "gx",
       help = "Smooths the edges of geometry as it is drawn. Sharper than image anti-aliasing, and costs more." },
     { cvar = "MSAAAlphaTest", label = "Multisample alpha test", group = "aa", kind = "toggle", validated = true,
       help = "Extends multisampling to cut-out textures such as leaves and fences." },

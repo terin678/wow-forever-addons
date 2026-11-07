@@ -358,6 +358,85 @@ T.Case("Model.Matches, View: which knobs are in view", function()
     T.Eq(Model.LevelOf(nil, Catalog.LEVELS), nil, "nor is no level")
 end)
 
+T.Case("Model.Median, CheckDue, Advise: when the check runs, and what a frame rate says", function()
+    T.Eq(Model.Median({}), nil, "no readings, no median")
+    T.Eq(Model.Median({ 50, 10, 30 }), 30, "the middle of an odd list")
+    T.Eq(Model.Median({ 10, 20, 30, 40 }), 25, "between the two middle ones of an even list")
+
+    local due, kept = Model.CheckDue({}, false)
+    T.True(due and not kept, "the first time, anywhere")
+    due, kept = Model.CheckDue({ checked = true }, false)
+    T.True(not due and not kept, "later, away from the defaults, never")
+    due, kept = Model.CheckDue({ checked = true }, true)
+    T.True(due and kept, "arriving at the defaults")
+    due, kept = Model.CheckDue({ checked = true, checkedAtDefaults = true }, true)
+    T.True(not due and kept, "but not on every login there")
+    due, kept = Model.CheckDue({ checked = true, checkedAtDefaults = true }, false)
+    T.True(not due and not kept, "and leaving them lets it run on the next arrival")
+    due = Model.CheckDue({ check = "off" }, true)
+    T.True(not due, "never, when the player said so")
+
+    local behind = { useMaxFPSBk = 1, maxFPSBk = 30 }
+    T.True(Model.BackgroundCapped(33, behind), "a reading just over the background limit was not measured")
+    T.True(not Model.BackgroundCapped(45, behind), "a clear reading above it was")
+    T.True(not Model.BackgroundCapped(30, { useMaxFPSBk = 0, maxFPSBk = 30 }), "and with the limit off, anything is")
+    T.True(not Model.BackgroundCapped(30, nil), "or with no settings to ask")
+
+    local presets, levels = Catalog.PRESETS, Catalog.LEVELS
+    local limits = { min = 0.3334, max = 2 }
+    local good, ultra = Model.FindPreset(levels, "good"), Model.FindPreset(levels, "ultra")
+    local advice = Model.Advise(25, 1, good, presets, levels, limits)
+    T.Eq(advice.kind, "low", "a low frame rate")
+    T.Eq(advice.axis .. ":" .. advice.preset.key, "scale:quality", "from native, one upscaling step down")
+    advice = Model.Advise(25, 0.58, good, presets, levels, limits)
+    T.Eq(advice.preset.key, "performance", "from Balanced, the next below")
+    advice = Model.Advise(25, 0.3334, good, presets, levels, limits)
+    T.Eq(advice.axis .. ":" .. advice.preset.key, "level:fair", "at the lowest upscale, one quality step down")
+    advice = Model.Advise(25, 0.3334, Model.FindPreset(levels, "low"), presets, levels, limits)
+    T.Eq(advice.preset, nil, "nowhere left to go")
+    advice = Model.Advise(60, 1, good, presets, levels, limits)
+    T.Eq(advice.kind, "fine", "a comfortable one")
+    advice = Model.Advise(140, 0.5, good, presets, levels, limits)
+    T.Eq(advice.axis .. ":" .. advice.preset.key, "scale:balanced", "room: one step toward native")
+    advice = Model.Advise(140, 1, good, presets, levels, limits)
+    T.Eq(advice.axis .. ":" .. advice.preset.key, "level:high", "at native, one quality step up")
+    advice = Model.Advise(140, 1, ultra, presets, levels, limits)
+    T.Eq(advice.preset, nil, "never up to Extreme, which is asked for")
+    T.Eq(Model.Advise(140, 1, nil, presets, levels, limits).preset, nil, "nor from a level in between")
+    advice = Model.Advise(144, 1, good, presets, levels, limits, true)
+    T.True(advice.kind == "held" and advice.preset == nil, "with vertical sync on, a good rate says nothing about room")
+    T.Eq(Model.Advise(25, 1, good, presets, levels, limits, true).kind, "low", "but a low one still does")
+    T.True(select(2, Model.AdviseText(advice, limits)):find("Vertical sync", 1, true), "and the window says why")
+
+    local head, body, button = Model.AdviseText(Model.Advise(25, 1, good, presets, levels, limits), limits)
+    T.True(head:find("25 fps", 1, true) and body:find("Quality 67%", 1, true) and button == "Use Quality 67%", "the words")
+    T.Eq(select(3, Model.AdviseText(Model.Advise(60, 1, good, presets, levels, limits), limits)), nil, "fine has no button")
+end)
+
+T.Case("Model.Recommended, Hint, ExtremeNote: the client's pick, and a word before Extreme", function()
+    local levels = Catalog.LEVELS
+    local rec, exact = Model.Recommended(6, levels)
+    T.Eq(rec.key, "high", "the client's own level 7 of 10 is High")
+    T.True(exact, "exactly")
+    rec, exact = Model.Recommended(5, levels)
+    T.Eq(rec.key, "good", "a level between presets takes the one below")
+    T.True(not exact, "and is the closest")
+    T.Eq(Model.Recommended(9, levels).key, "ultra", "never Extreme, which has extras")
+    T.Eq(Model.Recommended(nil, levels), nil, "no level, no recommendation")
+
+    local high, ultra = Model.FindPreset(levels, "high"), Model.FindPreset(levels, "ultra")
+    T.Eq(Model.Hint("base", high, true, high, 6), "base", "no hint at the recommended preset")
+    T.Eq(Model.Hint("base", nil, nil, ultra, nil), "base", "nor without a recommendation")
+    local hint = Model.Hint("base", high, true, ultra, 6)
+    T.True(hint:find("level 7 of 10", 1, true) and hint:find("High uses it", 1, true), "it names the level and the button")
+    T.True(Model.Hint("base", rec, false, ultra, 5):find("Good is the closest", 1, true), "or the closest")
+    T.True(hint:sub(-4) == "base", "and ends with the usual hint")
+
+    T.Eq(Model.ExtremeNote(90, 40), nil, "a healthy frame rate gets no note")
+    T.Eq(Model.ExtremeNote(0, 40), nil, "no reading, no note")
+    T.True(Model.ExtremeNote(31.4, 40):find("31 fps", 1, true), "a low one is said")
+end)
+
 T.Case("Model.LevelOf, AlsoHeld: Extreme is Ultra with its extras held, and only then", function()
     local extreme = Catalog.LEVELS[#Catalog.LEVELS]
     local function Held() local t = {} for k, v in pairs(extreme.also) do t[k] = v end return t end
@@ -565,6 +644,7 @@ if IC_HEADLESS then
         StaticPopup_Show = function(which, text, _, data)
             asked[#asked + 1] = { text = text, yes = function() StaticPopupDialogs[which].OnAccept(nil, data) end }
         end
+        RestartGx = function() sets[#sets + 1] = "RestartGx" end
         ns.Apply.ForgetSupport()
         C_CVar = {
             GetCVar = function(name) return cvars[name] end,
@@ -597,7 +677,7 @@ if IC_HEADLESS then
         StaticPopupDialogs, StaticPopup_Show = real.dialogs, real.show
         ns.Apply.ForgetSupport()
         ns.db, ns.cdb = real.db, real.cdb
-        ns.pendingRestart = nil
+        ns.pendingRestart, ns.pendingEngine = nil, nil
         if not ok then error(err, 0) end
     end
 
@@ -660,6 +740,51 @@ if IC_HEADLESS then
 
             run("defaults")
             T.Eq(cvars.Gamma, "0", "defaults come from the client")
+        end)
+    end)
+
+    T.Case("Check: the window says what the frame rate suggests, and its button does it", function()
+        WithClient(function(cvars, sets)
+            cvars.graphicsQuality = "4"
+            cvars.vsync = "0"
+            ns.Baseline()
+            local advice = ns.Check.Show(141.6)
+            T.Eq(advice.axis .. ":" .. advice.preset.key, "level:high", "a high frame rate at native steps quality up")
+            local popup = ns.Check.Popup()
+            T.True(ns.Check.IsShown(), "in a window")
+            T.True(popup.title:GetText():find("142 fps", 1, true), "naming the frame rate")
+            popup.use:GetScript("OnClick")(popup.use)
+            T.True(not ns.Check.IsShown(), "the button closes it")
+            T.Eq(cvars.graphicsQuality, "6", "and uses the suggestion")
+
+            ns.Check.Show(60)
+            T.True(not popup.use:IsShown(), "a comfortable rate offers nothing to use")
+            popup.skip:SetChecked(true)
+            popup.close:GetScript("OnClick")(popup.close)
+            T.Eq(ns.db.settings.check, "off", "the box turns the automatic check off")
+
+            -- Auto-set takes the step without the window.
+            cvars.graphicsQuality = "4"
+            ns.Check.Show(141.6, true)
+            T.Eq(cvars.graphicsQuality, "6", "auto-set uses the suggestion at once")
+            T.True(not ns.Check.IsShown(), "and shows no window")
+            ns.Check.Show(60, true)
+            T.True(ns.Check.IsShown(), "with nothing to take, the window says so")
+        end)
+    end)
+
+    T.Case("Panel: the Auto-set button starts the measurement", function()
+        WithClient(function(cvars, sets, run)
+            ns.Baseline()
+            run("")
+            local auto = ns.Panel.Frame().auto
+            T.True(auto ~= nil, "the button is there")
+            local started
+            local start = ns.Check.Start
+            ns.Check.Start = function(manual, _, isAuto) started = manual and isAuto end
+            auto:GetScript("OnClick")(auto)
+            ns.Check.Start = start
+            T.True(started, "a click measures, and asks for the step to be taken")
         end)
     end)
 
@@ -874,10 +999,16 @@ if IC_HEADLESS then
             T.Eq(cvars.graphicsQuality, "9", "on top of level 10")
             T.Eq(ns.Panel.Level("extreme").icKind, "accent", "Extreme is the one lit")
             T.Eq(ns.Panel.Level("ultra").icKind, "normal", "and Ultra is not")
+            T.Eq(#asked, 2, "then it asks to restart the graphics, for the multisampling and HDR")
+            T.True(asked[2].text:find("restart", 1, true), "and says so")
+            asked[2].yes()
+            T.Eq(sets[#sets], "RestartGx", "yes: the graphics engine is restarted")
+            T.Eq(ns.pendingEngine, nil, "and no longer owed")
+            T.Eq(ns.pendingRestart, "client", "and the physics level, which needs the game restarted, is still owed")
 
             -- Once on, pressing it again asks nothing.
             button:GetScript("OnClick")(button)
-            T.Eq(#asked, 1, "no second question for what is already on")
+            T.Eq(#asked, 2, "no second question for what is already on")
 
             local ultra = ns.Panel.Level("ultra")
             ultra:GetScript("OnClick")(ultra)

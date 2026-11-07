@@ -29,7 +29,7 @@ Nothing here runs while the game is idle: the addon acts on a command, a click o
 drag, and at login.
 ]]
 
-local VERSION = "0.4.0"
+local VERSION = "0.4.1"
 
 local Util = LibStub("LibICUtil-1.0")
 local Test = LibStub("LibICTest-1.0")
@@ -133,6 +133,14 @@ function ns.ApplyTarget(target, what, quiet)
         ns.pendingRestart = need
         if not quiet then out.Print(ns.Model.RestartHint(need)) end
     end
+    -- What the graphics restart can do, kept apart: a change that needs the whole game
+    -- restarted (Extreme has one) would otherwise hide that the engine restart is wanted too.
+    local engine = {}
+    for _, change in ipairs(plan) do
+        if change.knob.restart ~= "client" then engine[#engine + 1] = change end
+    end
+    local light = ns.Model.Restart(engine)
+    if light then ns.pendingEngine = (light == "gx" or ns.pendingEngine == "gx") and "gx" or "window" end
     RefreshPanel()
     return done
 end
@@ -159,6 +167,8 @@ function ns.SetKnob(knob, value)
     local target = knob.rank == 1 and ns.Apply.LevelValues(wanted, knob.raid) or {}
     target[knob.cvar] = wanted
     ns.ApplyTarget(target, knob.label, true)
+    -- Not for a slider: a drag would ask at every step.
+    if knob.restart and knob.kind ~= "slider" then ns.AskRestart() end
 end
 
 -- Whether the client will not take a value, for the extras: ray traced shadows on a card
@@ -197,6 +207,7 @@ function ns.ApplyLevel(preset)
         out.Print("this client has no overall quality level.")
         return
     end
+    ns.db.settings.picked = true
     local live = ns.Apply.Live()
     local held = HeldExtras(live)
     local line = string.format("%s quality: level %s, and the levels beneath it", preset.label,
@@ -228,7 +239,9 @@ function ns.ApplyLevel(preset)
             odd[#odd + 1] = "graphicsQuality is " .. tostring(after.graphicsQuality)
         end
         for cvar, want in pairs(wanted) do
-            if after[cvar] ~= nil and not ns.Model.Same(want, after[cvar]) then
+            local extra = ns.Model.Find(ns.Apply.Knobs(), cvar)
+            -- One that waits on the graphics restart is asked about below, not reported as lost.
+            if after[cvar] ~= nil and not ns.Model.Same(want, after[cvar]) and not (extra and extra.restart == "gx") then
                 odd[#odd + 1] = string.format("%s is %s, not %s", cvar, tostring(after[cvar]), tostring(want))
             end
         end
@@ -256,6 +269,7 @@ function ns.ApplyLevel(preset)
         ns.SetKnob(knob, preset.level)
     end
     out.Print(line .. ".")
+    ns.AskRestart()
 end
 
 -- Puts a list of knobs back to their saved values: one group, or what a search found.
@@ -285,14 +299,26 @@ function ns.Restore()
     ns.ApplyTarget(ns.db.original, "back to before RenderTuner")
 end
 
+-- Asks, in a dialog, to restart the graphics engine when a change is waiting on it, so the
+-- player need not find the button. Without a dialog to ask with, the button and the chat
+-- hint are still there.
+function ns.AskRestart()
+    if not ns.pendingEngine then return end
+    LibStub("LibICWidgets-1.0").Confirm(
+        "A change you made shows only after the graphics engine restarts.\n\nThe screen blinks. Restart it now?",
+        ns.Restart)
+end
+
 function ns.Restart()
-    if ns.pendingRestart == "client" then
+    local engine = ns.pendingEngine
+    if not engine and ns.pendingRestart == "client" then
         out.Print("that change needs the whole game restarted, which an addon cannot do.")
         return
     end
     out.Print("restarting the graphics engine.")
-    ns.Apply.Restart(ns.pendingRestart or "gx")
-    ns.pendingRestart = nil
+    ns.Apply.Restart(engine or ns.pendingRestart or "gx")
+    ns.pendingEngine = nil
+    if ns.pendingRestart ~= "client" then ns.pendingRestart = nil end
     RefreshPanel()
 end
 
@@ -313,6 +339,7 @@ local HELP = {
     { "defaults", "set everything to the client's defaults" },
     { "restore", "go back to how things were before RenderTuner first ran" },
     { "restart", "restart the graphics engine, for the changes that need it" },
+    { "check", "measure the frame rate and suggest a preset" },
     { "probe, capture ...", "questions for the client, used while building this" },
     { "test", "run the built-in checks" },
     { "help", "this list" },
@@ -485,6 +512,11 @@ COMMANDS.capture = function(rest)
     end
 end
 
+COMMANDS.check = function()
+    if not Ready() then return end
+    ns.Check.Start(true)
+end
+
 COMMANDS.test = function()
     ns.Tests.Run()
 end
@@ -512,6 +544,7 @@ frame:SetScript("OnEvent", Env.Wrap("RenderTuner events", function(_, event)
         ns.Baseline()
         if ns.Launcher then ns.Launcher.Create() end
         for _, line in ipairs(ns.LoadLines(VERSION, ns.StatusText())) do out.Print(line) end
+        if ns.Check then ns.Check.Login() end
     end
     if slashTaken then
         out.Print("|cffff9900another addon already registered the RENDERTUNER slash key.|r One of you owns /tuner now.")
