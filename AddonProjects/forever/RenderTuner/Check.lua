@@ -35,10 +35,15 @@ local function Take(advice)
     elseif advice and advice.axis == "level" then ns.ApplyLevel(advice.preset) end
 end
 
+-- The box says "never again" for the automatic check; it is read as the window closes,
+-- however it closes: a button, or Escape (which hides the frame without asking us).
+local function ReadSkip()
+    if popup and popup.skip then ns.db.settings.check = popup.skip:GetChecked() and "off" or nil end
+end
+
 local function Hide()
     if not popup then return end
-    -- The box says "never again" for the automatic check; it is read as the window closes.
-    ns.db.settings.check = popup.skip:GetChecked() and "off" or nil
+    ReadSkip()
     popup:Hide()
 end
 
@@ -46,6 +51,9 @@ local function Build()
     local p = W.Panel(UIParent, { name = "RenderTunerCheck", width = POPUP_W, height = POPUP_H, strata = "DIALOG" })
     p:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
     p:EnableMouse(true)
+    -- Escape closes it, as it closes the panel.
+    if type(UISpecialFrames) == "table" then UISpecialFrames[#UISpecialFrames + 1] = "RenderTunerCheck" end
+    p:HookScript("OnHide", ReadSkip)
 
     p.title = W.Label(p, "", { font = "title", color = "accent" })
     p.title:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -12)
@@ -95,8 +103,20 @@ function Check.Show(fps, auto)
     local head, body, button = Model.AdviseText(advice, limits)
 
     if auto and button then
-        ns.Print(head .. " Setting " .. button:gsub("^Use ", "") .. ".")
+        -- What it replaces, named before the step is taken.
+        local was
+        if advice.axis == "scale" then
+            local now = Model.PresetOf(live.RenderScale or 1, Catalog.PRESETS, limits)
+            was = now and now.label or string.format("%d%%", math.floor((live.RenderScale or 1) * 100 + 0.5))
+        else
+            was = level and level.label
+        end
+        local line = Model.AutoLine(advice, was, limits)
+        ns.Print(head .. " " .. line .. ". /tuner undo puts it back.")
+        local before = ns.Apply.Live()
         Take(advice)
+        ns.OfferUndo("Auto-set", before)
+        if ns.Panel then ns.Panel.Flash(line) end
         return advice
     end
 
@@ -117,20 +137,30 @@ end
 -- behind another window. It looks again twice, half a minute apart, and then lets the next
 -- login try.
 function Check.Start(manual, attempt, auto)
-    if running then return end
+    if running then
+        if manual then ns.Print("already measuring: the answer comes in a few seconds.") end
+        return
+    end
     if InCombatLockdown() then
         if manual then ns.Print("not in combat: try again once it is over.") end
         return
     end
     running = true
+    -- The panel's Auto-set button counts the seconds down while this runs.
+    local function Tell(left) if ns.Panel then ns.Panel.Measuring(left) end end
+    Tell(math.ceil(SAMPLES * EVERY))
     if manual then ns.Print("measuring the frame rate for a few seconds. Stay where you are.") end
     local readings, ticks = {}, 0
     C_Timer.NewTicker(EVERY, function()
         ticks = ticks + 1
         local fps = ns.Apply.Framerate()
         if fps > 0 then readings[#readings + 1] = fps end
-        if ticks < SAMPLES then return end
+        if ticks < SAMPLES then
+            Tell(math.ceil((SAMPLES - ticks) * EVERY))
+            return
+        end
         running = false
+        Tell(nil)
         local median = Model.Median(readings)
         if median and not manual and Model.BackgroundCapped(median, ns.Apply.Live()) then
             if (attempt or 1) < 3 then
@@ -158,6 +188,10 @@ function Check.Login()
     if not due then return end
     settings.checked = true
     C_Timer.After(SETTLE, function() Check.Start(false) end)
+end
+
+function Check.IsRunning()
+    return running
 end
 
 function Check.IsShown()

@@ -3,11 +3,19 @@
 The one place to tune WoW Forever's graphics: upscaling and quality presets, a live control
 for about 140 console variables, search, and a way back to what you had.
 
-**Version 0.4.1 has the floating panel and the commands**, an Extreme quality preset with
+**Version 0.5.0 has the floating panel and the commands**, an Extreme quality preset with
 the experimental extras, and a panel that can get out of the way of the world it tunes. It
-also says which quality level the game recommends for your machine, and warns before Extreme
-when your frame rate is already low, and measures your frame rate and suggests a preset. The page in the game's Options window and the
-side-by-side comparison come next.
+says which quality level the game recommends for your machine, warns before Extreme when your
+frame rate is already low, and measures your frame rate and takes the step it suggests
+(**Auto-set**, with **Undo**). The page in the game's Options window and the side-by-side
+comparison come next.
+
+**New in 0.5.0:** the 67% upscaling preset is **Crisp** (it was Quality, which is also the
+name of the row below it; `/tuner preset quality` still finds it). **Save** is **Keep**,
+because the game already remembers every change and the button only moves where Revert goes
+back to. Auto-set counts down while it measures and says what it did in the title bar;
+**Undo** puts back what Auto-set or Extreme changed; the recommended quality level keeps a
+bar under its button; the frame rate window closes on Escape.
 
 ## What the client can and cannot do
 
@@ -21,7 +29,7 @@ image and multisample anti-aliasing, low latency modes, HDR and colour correctio
 driven by console variables an addon may set. RenderTuner sets those and nothing else.
 
 FSR 1.0 is a spatial upscaler: it sharpens a lower-resolution frame and has no memory of
-earlier frames. A "Quality" preset built on it raises the frame rate the way a DLSS preset
+earlier frames. An upscaling preset built on it raises the frame rate the way a DLSS preset
 does, and it does not look the same.
 
 ## Install
@@ -51,7 +59,7 @@ In the panel, turning an experimental setting on asks first. Turning one off nev
 The first time you open the panel in a session, a warning says this and waits for
 **I understand**. Tick **Do not show this again** and it stays away for good.
 
-**Save a set that works before trying one**, so Revert has somewhere to return to. If the
+**Keep a set that works before trying one**, so Revert has somewhere to return to. If the
 game will not start afterwards, delete `WTF\Config.wtf` in the game folder
 (`_forever_\WTF\Config.wtf`): the client starts with default settings and writes a new
 one. That file holds machine-wide settings only, such as graphics and sound, not your
@@ -66,7 +74,8 @@ Escape closes it. Its place is kept per character, and it starts toward the left
 the middle of the screen stays clear.
 
 **The title bar** shows the frame rate, measured twice a second while the panel is open, and
-where things stand: "67% Quality, 2 unsaved".
+where things stand: "Upscaling 67% Crisp, 2 changed". For a few seconds after Auto-set it
+says what that did instead: "Auto-set: Upscaling Balanced 58%, was Native".
 
 **Getting out of the way.** The panel sits over the world you are tuning, so it can step aside:
 
@@ -81,25 +90,34 @@ where things stand: "67% Quality, 2 unsaved".
 use in each is highlighted.
 
 - **Upscaling** sets the render scale and the resample filter and nothing else. Each button
-  shows the share of the screen's pixels it draws. "Quality" and "Performance" here are the
-  names DLSS uses for render scales; they do not touch the quality levels.
+  shows the share of the screen's pixels it draws. "Performance" and "Balanced" here are
+  the names upscalers use for render scales; they do not touch the quality levels.
 - **Quality** sets the game's overall quality level, and the levels beneath it, and leaves
   upscaling alone. **Extreme**, at the right in orange, is Ultra and then everything the
   quality levels do not reach, turned all the way up (see below), after asking. Choosing a
   lower level puts those settings back as they were before Extreme.
 
-**The game's recommendation.** Until you pick a quality preset, the line under the rows says
-which level the client recommends for this machine (its own default for the overall level)
-and which button uses it, or is the closest. That button's tooltip says so from then on.
-If your frame rate is under 40 when you click Extreme, the question and the button's
-tooltip say so first.
+**The game's recommendation.** The level the client recommends for this machine (its own
+default for the overall level) keeps a bar under its button, whichever level is in use: dark
+on the gold of the one in use, green otherwise. Until you pick a quality preset, the line
+under the rows also says which button it is, or which is the closest; the button's tooltip
+says so from then on. If your frame rate is under 40 when you click Extreme, the question and
+the button's tooltip say so first.
 
 Clicking a preset brings the group it changes into view, so you see what it did. The two
 rows are independent: Potato upscaling with Ultra quality is a combination you can make.
 
-**Save** keeps the settings as they are now. **Revert** puts everything back to the saved
-set. **More...** has the client's defaults, the way back to before RenderTuner, and a
-restart of the graphics engine.
+**Keep** makes the settings as they are now the set Revert returns to, and counts what is
+waiting ("Keep (2)"). The game already remembers every change you make; Keep only moves the
+point Revert goes back to. **Revert** puts everything back to the kept set. **More...** has
+the client's defaults, the way back to before RenderTuner, a frame rate check, and a restart
+of the graphics engine.
+
+**Auto-set**, at the right, measures your frame rate for about six seconds (the button counts
+the seconds down) and takes the step it suggests: see the frame rate check below. **Undo**
+appears beside it afterwards, and after Extreme: one step that puts back every setting the
+change moved. It goes away when you change anything else, so it never undoes more than it
+offered to.
 
 **The search box** finds settings by name, by console variable, by what their help says or
 by group, across every group at once: type `shadow` or `fps`. Escape clears it.
@@ -107,7 +125,7 @@ by group, across every group at once: type `shadow` or `fps`. Escape clears it.
 **Down the left** are the groups, in three clusters: Picture, Detail and Advanced. Advanced
 is folded away until you open it (the line saying `Advanced +`), and says how many of its
 settings changed while it is shut. **Changed**, at the top, lists everything that differs
-from the saved set, whatever group it is in. A group with changes shows a count.
+from the kept set, whatever group it is in. A group with changes shows a count.
 
 **The rows on the right** are the settings in view, and they scroll with the mouse wheel.
 The line under them says what the setting under the pointer does.
@@ -116,11 +134,11 @@ The line under them says what the setting under the pointer does.
   from 1, nits or frames as they read. Enter sets it; Escape or clicking away drops it.
 
 - A change takes effect as you make it, with the world in view behind the panel.
-- A setting that differs from saved is in the accent colour and gains an **undo** at the
-  end of its row, which puts that one setting back. **Revert these**, in the heading,
-  puts back everything in view.
-- **Hover a setting's name** for what it does, its console variable, its saved value, the
-  client's default and its range. **Click the name** to choose between the saved value
+- A setting that differs from the kept set is in the accent colour and gains a **Revert**
+  at the end of its row, which puts that one setting back. **Revert these**, in the
+  heading, puts back everything in view.
+- **Hover a setting's name** for what it does, its console variable, its kept value, the
+  client's default and its range. **Click the name** to choose between the kept value
   and the client's default.
 - **A greyed-out setting** is one this client will not change at the moment, such as ray
   traced shadows. Its tooltip gives the client's reason. In a dropdown, single choices
@@ -129,7 +147,9 @@ The line under them says what the setting under the pointer does.
   it, as the same slider does on the game's own graphics page.
 
 **Restart graphics** appears when a change needs the graphics engine restarted before it
-shows.
+shows (multisampling is one). RenderTuner asks to restart it when you make such a change; say
+not now and the button stays until you do. A change that needs the whole game restarted, such
+as one of Extreme's, cannot be done by an addon, and it says so.
 
 The render scale slider applies when you let go of it rather than on every step, because
 each change rebuilds what the client draws into. Every other slider is live.
@@ -143,10 +163,11 @@ each change rebuilds what the client draws into. Every other slider is live.
 | `potato` | 33% (the client's floor) | FSR 1.0 |
 | `performance` | 50% | FSR 1.0 |
 | `balanced` | 58% | FSR 1.0 |
-| `quality` | 67% | FSR 1.0 |
+| `crisp` | 67% | FSR 1.0 |
 | `native` | 100% | left as it is |
 
-`/tuner preset quality` uses one; the start of a name is enough (`/tuner preset perf`).
+`/tuner preset crisp` uses one; the start of a name is enough (`/tuner preset perf`), and
+`quality`, the 67% preset's name before 0.5.0, still works.
 `/tuner off` goes to native and `/tuner on` returns to the last upscaling preset you used.
 A preset does not touch the sharpening strength, so it stays where you set it.
 
@@ -199,13 +220,17 @@ by hand after Extreme, the button no longer lights, and a lower level leaves the
 RenderTuner measures your frame rate for about six seconds (twelve readings, the middle one
 counts) and opens a window with the number and one suggestion, and a button that does it.
 
-- **Under 40 fps:** one step down. Upscaling first (Native to Quality 67%, and so on); once
+- **Under 40 fps:** one step down. Upscaling first (Native to Crisp 67%, and so on); once
   upscaling is at its lowest, one quality level.
 - **100 fps or more:** one step up. Toward native first, then one quality level. Never up
   to Extreme, which is asked for.
 - **In between:** the window says it is comfortable and offers nothing.
 - **Vertical sync on:** the game is held to your screen's refresh rate, so a frame rate that is
   not low says nothing about room. The window says so and suggests turning it off to check.
+
+**Auto-set** (the button, or `/tuner auto`) takes that step without the window: the button
+counts the seconds down, the chat and the title bar say what it did ("Auto-set: Quality High,
+was Good"), and **Undo** puts it back. When there is nothing to take, the window says so.
 
 The automatic check does not believe a reading at the background frame rate limit (the game
 was behind another window); it looks again twice, half a minute apart, then leaves it to the
@@ -218,18 +243,19 @@ login** in the window to stop the automatic check; `/tuner check` and **More...,
 frame rate** always run it. The reading depends on where you stand, so stay in the world,
 somewhere typical.
 
-## Saved, trial and original
+## Kept, trial and original
 
 The settings that are live in the game are the only copy that matters. RenderTuner keeps
 two sets to go back to:
 
-- **Saved** is what `/tuner save` last recorded. `/tuner revert` returns to it.
+- **Kept** is what `/tuner keep` last recorded (`/tuner save` still does the same).
+  `/tuner revert` returns to it.
 - **Original** is what was live the first time RenderTuner ran. `/tuner restore` returns
-  to it, whatever you have saved since.
+  to it, whatever you have kept since.
 
-Anything you change is a trial until you save it. Trial changes survive a `/reload` and a
+Anything you change is a trial until you keep it. Trial changes survive a `/reload` and a
 logout, because the client stores console variables itself; the login line tells you how
-many settings differ from the saved set.
+many settings differ from the kept set.
 
 ## Commands
 
@@ -238,20 +264,22 @@ many settings differ from the saved set.
 | Command | What it does |
 | --- | --- |
 | `/tuner` | Opens or closes the panel |
-| `/tuner status` | The render scale, its preset, and how many settings differ from saved |
+| `/tuner status` | The render scale, its preset, and how many settings differ from kept |
 | `/tuner preset [name]` | Lists the presets, or uses one |
 | `/tuner on`, `/tuner off` | Upscale with the last preset used, or go back to native |
 | `/tuner quality [name]` | Lists the overall quality presets, or uses one |
 | `/tuner list` | The groups, with how many settings each has and how many have changed |
-| `/tuner list <group>` | Every setting in a group with its value, and the saved value where it differs |
-| `/tuner list changed` | Only the settings that differ from saved |
+| `/tuner list <group>` | Every setting in a group with its value, and the kept value where it differs |
+| `/tuner list changed` | Only the settings that differ from kept |
 | `/tuner set <variable> <value>` | Sets one console variable from the catalogue |
-| `/tuner save` | Records the live settings as the saved set |
-| `/tuner revert` | Goes back to the saved set |
+| `/tuner keep` | Records the live settings as the kept set (`/tuner save` does the same) |
+| `/tuner revert` | Goes back to the kept set |
+| `/tuner undo` | Puts back what the last Auto-set or Extreme changed |
 | `/tuner defaults` | Sets everything to the client's defaults for this machine |
 | `/tuner restore` | Goes back to how things were before RenderTuner first ran |
 | `/tuner restart` | Restarts the graphics engine, for the few changes that need it |
 | `/tuner check` | Measures the frame rate for six seconds and opens a window with a suggestion |
+| `/tuner auto` | The same measurement, taking the step it suggests (the panel's Auto-set) |
 | `/tuner test` | Runs the built-in checks |
 
 `/tuner set` takes the value as `/tuner list` shows it: a number for a slider or a choice
@@ -303,7 +331,7 @@ the variables beneath a level when the level changes, so they have to be set aft
 ## The comparison view (coming)
 
 The client draws the world once per frame with one set of console variables, so two
-settings cannot be shown side by side live. What works instead: switch to the saved
+settings cannot be shown side by side live. What works instead: switch to the kept
 settings for a moment, capture the world into a texture, switch back, and show the left
 part of that capture over the live picture, with a divider to drag. The left side is a
 still, right while the camera holds still.

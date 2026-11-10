@@ -32,7 +32,7 @@ the way out.
     Model.RangeText(knob)
     Model.LevelOf(level, levels, live)     -> the quality preset the settings are at, or nil
     Model.AlsoHeld(preset, live)           -> whether the extras a preset turns on are on
-    Model.PresetLabel(preset, limits)      -> "Quality 67%", the text of an upscaling button
+    Model.PresetLabel(preset, limits)      -> "Crisp 67%", the text of an upscaling button
     Model.ParseTyped(knob, text)           -> the variable's value for what a player typed, or nil
 ]]
 
@@ -212,14 +212,14 @@ function Model.Find(knobs, text)
     return nil
 end
 
--- A row of `rows` whose key or label is `text`, or the only one either starts with.
+-- A row of `rows` whose key, label or alias is `text`, or the only one a key or label starts with.
 local function Pick(rows, text)
     local want = Util.Trim(text or ""):lower()
     if want == "" then return nil end
     local found, count = nil, 0
     for _, row in ipairs(rows) do
         local key, label = row.key:lower(), row.label:lower()
-        if key == want or label == want then return row end
+        if key == want or label == want or (row.alias and row.alias:lower() == want) then return row end
         if key:sub(1, #want) == want or label:sub(1, #want) == want then
             found, count = row, count + 1
         end
@@ -257,8 +257,9 @@ end
 --------------------------------------------------------------------------------
 
 -- A knob's name as it is shown, with the mark an experimental one carries.
-function Model.Label(knob)
-    if knob.experimental then return knob.label .. " |cffff8040experimental|r" end
+-- `warn` is the colour code to put it in: the theme's, which reads on any ground.
+function Model.Label(knob, warn)
+    if knob.experimental then return knob.label .. " " .. (warn or "|cffff8040") .. "experimental|r" end
     return knob.label
 end
 
@@ -267,7 +268,7 @@ Model.WARNING = {
     body = "Some of these settings can crash the game.\n\n"
         .. "Anything marked |cffff8040experimental|r can crash your game, or leave it unable to draw the world. "
         .. "They depend on your graphics card and its driver, and the client itself calls some of them beta features.\n\n"
-        .. "Save a set that works before you try one: Revert returns to it. "
+        .. "Keep a set that works before you try one: Revert returns to it. "
         .. "If the game will not start afterwards, delete WTF\\Config.wtf in the game folder and it starts with default settings.",
     skip = "Do not show this again",
     go = "I understand",
@@ -276,7 +277,7 @@ Model.WARNING = {
 function Model.Line(knob, live, saved)
     local text = string.format("  %s |cff888888%s|r: %s", Model.Label(knob), knob.cvar, Model.Format(knob, live))
     if saved ~= nil and live ~= nil and not Model.Same(live, saved) then
-        text = text .. string.format("  |cffffcc00saved: %s|r", Model.Format(knob, saved))
+        text = text .. string.format("  |cffffcc00kept: %s|r", Model.Format(knob, saved))
     end
     return text
 end
@@ -291,22 +292,23 @@ function Model.RestartHint(need)
     return RESTART_HINT[need]
 end
 
--- "render scale 67% (Quality), 2 settings differ from the saved set."
+-- "render scale 67% (Crisp), 2 settings differ from the kept set."
 function Model.Status(scaleText, preset, changed)
     local text = "render scale " .. scaleText
     if preset then text = text .. " (" .. preset.label .. ")" end
     if changed == 0 then
-        return text .. ", everything as saved."
+        return text .. ", everything as kept."
     end
-    return string.format("%s, %d %s from the saved set.", text, changed,
+    return string.format("%s, %d %s from the kept set.", text, changed,
         changed == 1 and "setting differs" or "settings differ")
 end
 
--- The same, short enough for a title bar: "67% Quality, 2 unsaved".
+-- The same, short enough for a title bar: "Upscaling 67% Crisp, 2 changed". It says which
+-- row it is about: the Quality row has a word of its own for every level.
 function Model.Brief(scaleText, preset, changed)
-    local text = scaleText
+    local text = "Upscaling " .. scaleText
     if preset then text = text .. " " .. preset.label end
-    if changed > 0 then text = text .. string.format(", %d unsaved", changed) end
+    if changed > 0 then text = text .. string.format(", %d changed", changed) end
     return text
 end
 
@@ -458,7 +460,7 @@ end
 -- client's recommendation while the settings are at some other quality preset.
 function Model.Hint(base, recommended, exact, current, defaultLevel)
     if not recommended or recommended == current then return base end
-    local text = string.format("The game recommends quality level %d of 10 for this machine; %s %s. ",
+    local text = string.format("The game recommends quality level %d of 10 for this machine; %s (the bar under it) %s. ",
         math.floor(defaultLevel + 1.5), recommended.label, exact and "uses it" or "is the closest")
     return text .. base
 end
@@ -579,6 +581,17 @@ function Model.AdviseText(advice, limits)
         and (label .. " draws more of the screen's pixels, for a sharper picture.")
         or ("Quality " .. label .. " is one step up.")
     return head, "That leaves room. " .. why, "Use " .. label
+end
+
+-- What Auto-set did, for the title bar and the chat: "Auto-set: Upscaling Balanced 58%, was
+-- Native". `was` is the name of what it replaced, or nil when that had none (a custom level).
+-- Nil when the advice took no step.
+function Model.AutoLine(advice, was, limits)
+    if not advice or not advice.preset then return nil end
+    local scale = advice.axis == "scale"
+    return string.format("Auto-set: %s %s%s", scale and "Upscaling" or "Quality",
+        scale and Model.PresetLabel(advice.preset, limits) or advice.preset.label,
+        was and (", was " .. was) or "")
 end
 
 -- The text on a preset's button in the upscaling row: its name and the share of the

@@ -4,24 +4,29 @@ local addonName, ns = ...
 The panel: every knob in the catalogue as a control, changed live while the world is in
 view behind it.
 
-    +------------------------------------------------------------------------+
-    | RenderTuner  142 fps        Quality 67%, 2 unsaved   Peek  Compact   x |  drag the bar
-    | Upscaling  [Potato] [Performance] [Balanced] [Quality] [Native]        |  render scale, low to high
-    | Quality    [Low] [Fair] [Good] [High] [Ultra] [Extreme]                |  the game's 1 to 10 level
-    | [Save] [Revert] [More...]  [Search settings      ]  [Restart graphics] |
-    | Changed (2)        | Upscaling   Render scale, the filter...  [Revert] |
-    | PICTURE            | Render scale      <---o------->  67%      undo    |
-    |   Upscaling (1)    | Resample filter   [ FSR 1.0      v ]              |
-    |   Anti-aliasing    | Sharpening        <------o---->  1.8              |
-    | DETAIL             |                                                   |
-    |   ...              | what the setting under the pointer does           |
-    | Advanced +         +---------------------------------------------------+
-    +------------------------------------------------------------------------+
+    +--------------------------------------------------------------------------------+
+    | RenderTuner  142 fps   Upscaling 67% Crisp, 2 changed   Peek  Compact   x      |  drag the bar
+    | Upscaling  [Potato] [Performance] [Balanced] [Crisp] [Native]                  |  render scale, low to high
+    | Quality    [Low] [Fair] [Good] [High] [Ultra] [Extreme]                        |  the game's 1 to 10 level
+    |            a bar under the level the game recommends                           |
+    | [Keep (2)] [Revert] [More...] [Search]   [Restart graphics] [Undo] [Auto-set]  |
+    | Changed (2)        | Upscaling   Render scale, the filter...   [Revert these]  |
+    | PICTURE            | Render scale      <---o------->  67%      [Revert]        |
+    |   Upscaling (1)    | Resample filter   [ FSR 1.0      v ]                      |
+    |   Anti-aliasing    | Sharpening        <------o---->  1.8                      |
+    | DETAIL             |                                                           |
+    |   ...              | what the setting under the pointer does                   |
+    | Advanced +         +-----------------------------------------------------------+
+    +--------------------------------------------------------------------------------+
+
+Restart graphics shows only while a change waits on the engine, and Undo only for the one
+step after Auto-set or Extreme. Auto-set counts down its measurement on its own button
+("Measuring... 6") and says what it did in the title bar for a few seconds.
 
 Down the left are "Changed" and the groups, in three clusters, the last folded away; the
 rows on the right are the knobs of the one picked, or of whatever the search box finds, in a
-view that scrolls. A row whose value differs from the saved set is in the accent colour and
-gains an undo; its group shows a count. Clicking a row's name offers its saved value and the
+view that scrolls. A row whose value differs from the kept set is in the accent colour and
+gains a Revert; its group shows a count. Clicking a row's name offers its kept value and the
 client's default; clicking a slider's number types one. The line under the rows says what
 the setting under the pointer does.
 
@@ -31,8 +36,9 @@ slider is held it goes half clear.
 
 This file decides nothing about a value. It shows what Apply.Live() reads and hands what
 the player did to the actions in Core.lua, which call Refresh() back. Rows are made the
-first time they are needed and kept. The only thing that runs on a timer is the frame
-rate in the title bar, twice a second, and only while the panel is open.
+first time they are needed and kept. What runs on a timer: the frame rate in the title
+bar, twice a second, only while the panel is open; and, for a few seconds after Auto-set,
+the line that says what it did.
 ]]
 
 local Util = LibStub("LibICUtil-1.0")
@@ -49,6 +55,7 @@ local WIDTH = 720
 local PAD = 8
 local BAR_H = 24
 local BUTTON_H = 22
+local BAR_BUTTON_H = 20  -- the title bar's small buttons, as tall as the bar leaves room for
 local STRIP_GAP = 4
 local STRIP_LABEL_W = 70
 local GROUP_W = 170
@@ -59,7 +66,10 @@ local HELP_H = 30
 local ROW_H = 24
 local LABEL_W = 200
 local CONTROL_W = 240
-local UNDO_W = 44
+local REVERT_W = 48
+local UNDO_W = 56
+local AUTO_W = 100          -- wide enough for "Measuring... 6"
+local FLASH_FOR = 8         -- seconds Auto-set's answer holds the title bar's status
 -- Bar, the two preset strips, the actions, and the gaps between them.
 local TOP = BAR_H + PAD + BUTTON_H + STRIP_GAP + BUTTON_H + PAD + BUTTON_H + PAD
 local ROWS_X = PAD + GROUP_W + PAD
@@ -67,7 +77,7 @@ local ROWS_W = WIDTH - ROWS_X - PAD
 local CHANGED = "changed"
 local PEEK_ALPHA = 0.08     -- while Peek is held
 local HOLD_ALPHA = 0.4      -- while a slider is held
-local HINT = "Click a setting's name for its saved value or the default. Click a number to type one."
+local HINT = "Click a setting's name for its kept value or the default. Click a number to type one."
 local LOW_FPS = 40              -- below this, Extreme says it will cost more
 local idleHint = HINT           -- the line under the rows with nothing under the pointer
 local hovering = false
@@ -98,6 +108,14 @@ local ticker                -- the frame rate's timer, alive only while the pane
 local peeking = false       -- Peek is held
 local holding = false       -- a slider is held
 local laidOut               -- which layout Panel.Layout last made
+local measuring             -- seconds left in the frame rate check, or nil
+local flashText, flashId    -- a line that holds the title bar's status for a while, and which one
+
+-- The colour code for what is experimental or can crash: the theme's warning colour, since a
+-- fixed orange does not read on every ground.
+local function Warn()
+    return Theme.Hex(Theme.Current().colors.warn)
+end
 
 local function Place()
     return ns.cdb and ns.cdb.panel
@@ -147,7 +165,7 @@ local function RowTip(tip, row)
     tip:AddLine(knob.label)
     tip:AddLine(knob.help, 1, 1, 1, true)
     if knob.experimental then
-        tip:AddLine("Experimental: this one can crash the game. Save a set that works first.", 1, 0.5, 0.25, true)
+        tip:AddLine("Experimental: this one can crash the game. Keep a set that works first.", 1, 0.5, 0.25, true)
     end
     if row.locked then
         tip:AddLine("This client will not change it at the moment: " .. row.locked, 1, 0.3, 0.3, true)
@@ -156,7 +174,7 @@ local function RowTip(tip, row)
     tip:AddDoubleLine("Console variable", knob.cvar, 0.7, 0.7, 0.7, 1, 1, 1)
     tip:AddDoubleLine("Now", Model.Format(knob, live), 0.7, 0.7, 0.7, 1, 1, 1)
     if not Model.Same(live, saved) then
-        tip:AddDoubleLine("Saved", Model.Format(knob, saved), 0.7, 0.7, 0.7, 1, 0.82, 0)
+        tip:AddDoubleLine("Kept", Model.Format(knob, saved), 0.7, 0.7, 0.7, 1, 0.82, 0)
     end
     if defaults and defaults[knob.cvar] ~= nil then
         tip:AddDoubleLine("Client default", Model.Format(knob, defaults[knob.cvar]), 0.7, 0.7, 0.7, 1, 1, 1)
@@ -164,7 +182,7 @@ local function RowTip(tip, row)
     tip:AddDoubleLine("Range", Model.RangeText(knob), 0.7, 0.7, 0.7, 1, 1, 1)
     local need = Model.RestartHint(knob.restart)
     if need then tip:AddLine(need, 1, 0.5, 0.2, true) end
-    tip:AddLine("Click for the saved value or the default", 0.7, 0.7, 0.7)
+    tip:AddLine("Click for the kept value or the default", 0.7, 0.7, 0.7)
 end
 
 -- A change from a control. Turning an experimental knob on is asked about first; the
@@ -185,7 +203,7 @@ local function RowMenu(row)
     local default = defaults and defaults[knob.cvar]
     local items = { { title = knob.label } }
     if saved ~= nil then
-        items[#items + 1] = { text = "Back to saved: " .. Model.Format(knob, saved),
+        items[#items + 1] = { text = "Revert to kept: " .. Model.Format(knob, saved),
             onClick = function() Change(knob, saved) end }
     end
     if default ~= nil then
@@ -210,7 +228,7 @@ local function ShowHelp(row)
         return
     end
     local text = knob.help or ""
-    if knob.experimental then text = text .. " |cffff8040Experimental: can crash the game.|r" end
+    if knob.experimental then text = text .. " " .. Warn() .. "Experimental: can crash the game.|r" end
     frame.help:SetText(text)
 end
 
@@ -232,7 +250,7 @@ end
 
 local function BuildRow(knob)
     local row = CreateFrame("Frame", nil, frame.scroll.content)
-    row:SetSize(LABEL_W + CONTROL_W + 4 + UNDO_W, ROW_H)
+    row:SetSize(LABEL_W + CONTROL_W + 4 + REVERT_W, ROW_H)
     row.knob = knob
     row.locked = false
     row.icIndex = 0
@@ -241,7 +259,7 @@ local function BuildRow(knob)
     row.band:SetAllPoints(row)
     row.band:Hide()
 
-    row.name = W.Button(row, Model.Label(knob), LABEL_W - 6, ROW_H - 4, {
+    row.name = W.Button(row, Model.Label(knob, Warn()), LABEL_W - 6, ROW_H - 4, {
         kind = "flat", justify = "LEFT", font = "body", textRole = "text",
         onClick = function() RowMenu(row) end,
     })
@@ -287,13 +305,13 @@ local function BuildRow(knob)
     end
 
     -- The way back for this one setting, shown only while it differs from saved.
-    row.undo = W.Button(row, "undo", UNDO_W, ROW_H - 6, {
+    row.revert = W.Button(row, "Revert", REVERT_W, ROW_H - 4, {
         kind = "flat", font = "small",
         onClick = function() Change(knob, ns.db.saved[knob.cvar]) end,
     })
-    row.undo:SetPoint("LEFT", row, "LEFT", LABEL_W + CONTROL_W + 4, 0)
-    W.Tooltip(row.undo, function(tip)
-        tip:AddLine("Back to saved")
+    row.revert:SetPoint("LEFT", row, "LEFT", LABEL_W + CONTROL_W + 4, 0)
+    W.Tooltip(row.revert, function(tip)
+        tip:AddLine("Revert to kept")
         tip:AddLine(Model.Format(knob, ns.db.saved[knob.cvar]), 1, 1, 1)
     end)
     return row
@@ -328,12 +346,27 @@ local function UpdateRow(row, live, saved)
     else
         row.name:SetTextRole(changed and "accent" or "text")
     end
-    row.undo:SetShown(changed and row.locked == false)
+    row.revert:SetShown(changed and row.locked == false)
 end
 
 --------------------------------------------------------------------------------
 -- The frame
 --------------------------------------------------------------------------------
+
+-- Auto-set's button: its name, or the seconds left while the frame rate is measured.
+local function ShowAuto()
+    local button = frame and frame.auto
+    if not button then return end
+    if measuring then
+        button:Disable()
+        button:SetLabel("Measuring... " .. measuring)
+        button:SetTextRole("textDim")
+    else
+        button:Enable()
+        button:SetLabel("Auto-set")
+        button:SetTextRole(false)
+    end
+end
 
 local function ClearSearch()
     search = ""
@@ -345,11 +378,11 @@ local function MoreMenu(owner)
         { title = "RenderTuner" },
         { text = "Client defaults...", onClick = function()
             W.Confirm("Set every setting here to the client's defaults for this machine?\n\n"
-                .. "Revert brings the saved set back.", ns.Defaults)
+                .. "Revert brings the kept set back.", ns.Defaults)
         end },
         { text = "Back to before RenderTuner...", onClick = function()
             W.Confirm("Go back to the settings from before RenderTuner first ran?\n\n"
-                .. "Revert brings the saved set back.", ns.Restore)
+                .. "Revert brings the kept set back.", ns.Restore)
         end },
         { divider = true },
         { text = "Check my frame rate", onClick = function() ns.Check.Start(true) end },
@@ -379,7 +412,7 @@ local EXTREME_WARNING = "Extreme is Ultra and then every setting beyond the qual
     .. "up: how far everything is drawn, shadows and light, water and particles, 8x multisampling, a "
     .. "32-bit float render format, HDR output and ray traced shadows, where this machine has them.\n\n"
     .. "It is heavy, and some of it can crash the game or leave it unable to draw the world. "
-    .. "Save a set that works first. Choosing a lower level puts it all back as it was.\n\nTurn it on?"
+    .. "Keep a set that works first. Choosing a lower level, or Undo, puts it all back as it was.\n\nTurn it on?"
 
 local function Build()
     local p = W.Panel(UIParent, {
@@ -393,6 +426,11 @@ local function Build()
     })
     -- Escape closes it, as it does the game's own windows.
     if type(UISpecialFrames) == "table" then UISpecialFrames[#UISpecialFrames + 1] = "RenderTunerPanel" end
+    -- The warning colour is written into text, so a new theme needs the text written again.
+    Theme.OnChange(function()
+        for _, row in pairs(rows) do row.name:SetLabel(Model.Label(row.knob, Warn())) end
+        if frame and frame:IsShown() then Panel.Refresh() end
+    end)
 
     local bar = W.Panel(p, { role = "raised", edge = false, height = BAR_H })
     bar:SetPoint("TOPLEFT", p, "TOPLEFT", 1, -1)
@@ -405,11 +443,11 @@ local function Build()
     p.fps = W.Label(bar, "", { color = "text" })
     p.fps:SetPoint("LEFT", title, "RIGHT", 12, 0)
 
-    local close = W.Button(bar, "x", 20, 18, { kind = "flat", onClick = function() p:Hide() end })
+    local close = W.Button(bar, "x", 22, BAR_BUTTON_H, { kind = "flat", onClick = function() p:Hide() end })
     close:SetPoint("RIGHT", bar, "RIGHT", -3, 0)
     W.Tooltip(close, function(tip) tip:AddLine("Close") end)
 
-    p.compact = W.Button(bar, "Compact", 62, 18, { kind = "flat", onClick = function() Panel.SetCompact(not Compact()) end })
+    p.compact = W.Button(bar, "Compact", 62, BAR_BUTTON_H, { kind = "flat", onClick = function() Panel.SetCompact(not Compact()) end })
     p.compact:SetPoint("RIGHT", close, "LEFT", -4, 0)
     W.Tooltip(p.compact, function(tip)
         tip:AddLine(Compact() and "Expand" or "Compact")
@@ -418,7 +456,7 @@ local function Build()
     end)
 
     -- Held, not clicked: the panel is nearly clear for as long as the button is down.
-    p.peek = W.Button(bar, "Peek", 42, 18, { kind = "flat" })
+    p.peek = W.Button(bar, "Peek", 42, BAR_BUTTON_H, { kind = "flat" })
     p.peek:SetPoint("RIGHT", p.compact, "LEFT", -4, 0)
     p.peek:HookScript("OnMouseDown", function() Panel.Peek(true) end)
     p.peek:HookScript("OnMouseUp", function() Panel.Peek(false) end)
@@ -483,34 +521,46 @@ local function Build()
         end
         local rec, exact = Recommendation()
         if rec == preset then
-            tip:AddLine(exact and "The game's recommended level for this machine."
-                or "The closest to the game's recommended level for this machine.", 0.5, 1, 0.5, true)
+            tip:AddLine(exact and "The game's recommended level for this machine (the bar under the button)."
+                or "The closest to the game's recommended level for this machine (the bar under the button).",
+                0.5, 1, 0.5, true)
         end
         local note = preset.experimental and Model.ExtremeNote(ns.Apply.Framerate(), LOW_FPS)
         if note then tip:AddLine(note, 1, 0.5, 0.25, true) end
     end)
 
+    -- The game's recommended level for this machine keeps a bar under its button for good,
+    -- whichever level is in use: a shape, so it does not depend on telling two colours apart.
+    for _, b in pairs(levelButtons) do
+        b.rec = b:CreateTexture(nil, "OVERLAY")
+        b.rec:SetHeight(2)
+        b.rec:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", 4, 3)
+        b.rec:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -4, 3)
+        b.rec:Hide()
+    end
+
     -- Actions
     local gap = 4
     local actionsY = stripY - (BUTTON_H + STRIP_GAP) - BUTTON_H - PAD
-    p.save = W.Button(p, "Save", 70, BUTTON_H, { onClick = function() ns.Save() end })
-    p.save:SetPoint("TOPLEFT", p, "TOPLEFT", PAD, actionsY)
-    W.Tooltip(p.save, function(tip)
-        tip:AddLine("Save")
-        tip:AddLine("Keeps the settings as they are now. Revert returns to them.", 1, 1, 1, true)
+    p.keep = W.Button(p, "Keep", 70, BUTTON_H, { onClick = function() ns.Keep() end })
+    p.keep:SetPoint("TOPLEFT", p, "TOPLEFT", PAD, actionsY)
+    W.Tooltip(p.keep, function(tip)
+        tip:AddLine("Keep")
+        tip:AddLine("Makes the settings as they are now the set Revert returns to. The game already remembers "
+            .. "every change you make; this only moves the point Revert goes back to.", 1, 1, 1, true)
     end)
 
     p.revert = W.Button(p, "Revert", 70, BUTTON_H, { onClick = function() ns.Revert() end })
-    p.revert:SetPoint("LEFT", p.save, "RIGHT", gap, 0)
+    p.revert:SetPoint("LEFT", p.keep, "RIGHT", gap, 0)
     W.Tooltip(p.revert, function(tip)
         tip:AddLine("Revert")
-        tip:AddLine("Puts every setting back to the saved set.", 1, 1, 1, true)
+        tip:AddLine("Puts every setting back to the kept set.", 1, 1, 1, true)
     end)
 
     local more = W.Button(p, "More...", 70, BUTTON_H, { onClick = function(self) MoreMenu(self) end })
     more:SetPoint("LEFT", p.revert, "RIGHT", gap, 0)
 
-    p.search = W.EditBox(p, 190, BUTTON_H, {
+    p.search = W.EditBox(p, 180, BUTTON_H, {
         maxBytes = 40, placeholder = "Search settings",
         onChange = function(text)
             search = Util.Trim(text)
@@ -525,17 +575,29 @@ local function Build()
     })
     p.search:SetPoint("LEFT", more, "RIGHT", 12, 0)
 
-    p.auto = W.Button(p, "Auto-set", 80, BUTTON_H, { onClick = function() ns.Check.Start(true, nil, true) end })
+    p.auto = W.Button(p, "Auto-set", AUTO_W, BUTTON_H, { onClick = function() ns.Check.Start(true, nil, true) end })
     p.auto:SetPoint("TOPRIGHT", p, "TOPRIGHT", -PAD, actionsY)
     W.Tooltip(p.auto, function(tip)
         tip:AddLine("Auto-set")
-        tip:AddLine("Measures your frame rate for a few seconds, then takes one step: down if it is low, up "
-            .. "if there is room. With nothing to change, it says so. Stay where you are, out of combat.",
-            1, 1, 1, true)
+        tip:AddLine("Measures your frame rate for about six seconds, then takes one step. Low: Upscaling "
+            .. "steps down first, then Quality once Upscaling is at its lowest. Room to spare: the reverse, "
+            .. "Upscaling up toward Native first, then Quality. With nothing to change, it says so. "
+            .. "Stay where you are, out of combat.", 1, 1, 1, true)
+        tip:AddLine("The same as /tuner auto.", 0.7, 0.7, 0.7, true)
     end)
 
-    p.restart = W.Button(p, "Restart graphics", 130, BUTTON_H, { kind = "danger", onClick = function() ns.Restart() end })
-    p.restart:SetPoint("RIGHT", p.auto, "LEFT", -gap, 0)
+    p.restart = W.Button(p, "Restart graphics", 120, BUTTON_H, { kind = "danger", onClick = function() ns.Restart() end })
+    -- One step back after Auto-set or Extreme, there only until something else changes.
+    p.undo = W.Button(p, "Undo", UNDO_W, BUTTON_H, { onClick = function() ns.Undo() end })
+    p.undo:SetPoint("RIGHT", p.auto, "LEFT", -gap, 0)
+    W.Tooltip(p.undo, function(tip)
+        tip:AddLine(ns.undo and ("Undo " .. ns.undo.label) or "Undo")
+        tip:AddLine("Puts every setting back as it was before. It goes away when you change anything else.",
+            1, 1, 1, true)
+    end)
+    p.undo:Hide()
+
+    p.restart:SetPoint("RIGHT", p.undo, "LEFT", -gap, 0)
     W.Tooltip(p.restart, function(tip)
         tip:AddLine("Restart graphics")
         tip:AddLine("A change you made shows only after the graphics engine restarts. The screen blinks.",
@@ -591,7 +653,7 @@ local function Build()
     p.revertView:SetPoint("RIGHT", p, "TOPRIGHT", -PAD, -(TOP + HEAD_H / 2 - 2))
     W.Tooltip(p.revertView, function(tip)
         tip:AddLine("Revert these")
-        tip:AddLine("Puts the settings in view back to their saved values.", 1, 1, 1, true)
+        tip:AddLine("Puts the settings in view back to their kept values.", 1, 1, 1, true)
     end)
     p.icList = false
 
@@ -693,7 +755,7 @@ function Panel.Refresh()
         -- Kept as it was when the view opened: a setting put back to its saved value
         -- stays in the list, rather than vanishing from under the pointer.
         stickyChanged = stickyChanged or Model.View(knobs, { changed = true }, live, saved, Catalog.GROUPS)
-        list, title, viewKey = stickyChanged, "Changed since the last save", CHANGED
+        list, title, viewKey = stickyChanged, "Changed since the last Keep", CHANGED
         note = string.format("%d %s", #list, Util.Plural(#list, "setting"))
     else
         list, viewKey = Model.View(knobs, { group = current }, live, saved, Catalog.GROUPS), current
@@ -738,7 +800,7 @@ function Panel.Refresh()
     frame.head:SetText(title or "")
     frame.note:SetText(note or "")
     frame.revertView:SetShown(viewChanged > 0)
-    frame.empty:SetText(#list > 0 and "" or (search ~= "" and "No setting matches." or "Nothing differs from the saved set."))
+    frame.empty:SetText(#list > 0 and "" or (search ~= "" and "No setting matches." or "Nothing differs from the kept set."))
 
     -- The groups, each with how many of its knobs differ from saved
     local changedIn, changed = {}, 0
@@ -781,21 +843,52 @@ function Panel.Refresh()
     end
     local level = Model.LevelOf(live.graphicsQuality, Catalog.LEVELS, live, ns.Excused)
     local rec, exact = Recommendation()
-    -- Said until the player has chosen a quality preset once; the button's tooltip keeps saying it.
+    -- Said in words until the player has chosen a quality preset once; the bar under the
+    -- recommended button and its tooltip keep saying it.
     idleHint = ns.db.settings.picked and HINT or Model.Hint(HINT, rec, exact, level, defaultLevel)
     if not hovering then frame.help:SetText(idleHint) end
     for _, each in ipairs(Catalog.LEVELS) do
         local b = levelButtons[each.key]
         b:SetKind(each == level and "accent" or "normal")
+        -- Dark on the gold of the one in use, green on the rest.
+        local colors = Theme.Current().colors
+        local mark = each == level and colors.accentText or colors.good
+        b.rec:SetColorTexture(mark.r, mark.g, mark.b, 1)
+        b.rec:SetShown(each == rec)
         -- The one that can crash the game is orange until it is the chosen one.
-        b:SetLabel((each.experimental and each ~= level) and ("|cffff8040" .. each.label .. "|r") or each.label)
+        b:SetLabel((each.experimental and each ~= level) and (Warn() .. each.label .. "|r") or each.label)
     end
 
     local scale = Model.Find(knobs, "RenderScale")
-    frame.status:SetText(Model.Brief(scale and Model.Format(scale, live.RenderScale) or "?", preset, changed))
-    frame.save:SetKind(changed > 0 and "accent" or "normal")
+    frame.status:SetText(flashText or Model.Brief(scale and Model.Format(scale, live.RenderScale) or "?", preset, changed))
+    -- Gold fill is for the level and preset in use; what is waiting to be kept is said in words.
+    frame.keep:SetLabel(changed > 0 and string.format("Keep (%d)", changed) or "Keep")
     frame.restart:SetShown(ns.pendingEngine ~= nil)
+    frame.undo:SetShown(ns.undo ~= nil)
+    -- Restart sits against whichever of the two is there, so no gap is left.
+    frame.restart:SetPoint("RIGHT", ns.undo and frame.undo or frame.auto, "LEFT", -4, 0)
+    ShowAuto()
     Panel.Layout()
+end
+
+-- The frame rate check is running (seconds left) or finished (nil): Auto-set counts down and
+-- cannot be clicked again meanwhile, so a second click is not met with silence.
+function Panel.Measuring(left)
+    measuring = left
+    ShowAuto()
+end
+
+-- Says `text` in the title bar's status for a few seconds, over the usual one.
+function Panel.Flash(text)
+    flashText = text
+    flashId = (flashId or 0) + 1
+    local mine = flashId
+    C_Timer.After(FLASH_FOR, function()
+        if flashId ~= mine then return end
+        flashText = nil
+        if frame and frame:IsShown() then Panel.Refresh() end
+    end)
+    if frame and frame:IsShown() then Panel.Refresh() end
 end
 
 -- A group's key, or "changed" for everything that differs from saved.
@@ -979,6 +1072,11 @@ end
 
 function Panel.IsCompact()
     return Compact()
+end
+
+-- The Quality strip's button for a preset, for the cases.
+function Panel.LevelButton(key)
+    return levelButtons[key]
 end
 
 function Panel.Frame()

@@ -81,7 +81,9 @@ Catalog.PRESETS = {
     { key = "potato", label = "Potato", scale = 0.3334 },
     { key = "performance", label = "Performance", scale = 0.5 },
     { key = "balanced", label = "Balanced", scale = 0.58 },
-    { key = "quality", label = "Quality", scale = 0.67 },
+    -- Called Quality until 0.5.0, which collided with the Quality row below it; `alias` keeps
+    -- the old name working in /tuner preset and in the last preset a player used.
+    { key = "crisp", alias = "quality", label = "Crisp", scale = 0.67 },
     { key = "native", label = "Native", scale = 1 },
 }
 Catalog.FSR = 3

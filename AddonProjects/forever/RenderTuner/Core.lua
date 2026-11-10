@@ -13,7 +13,7 @@ and nothing else.
 There is one source of truth, the console variables as the client has them now. The
 addon keeps two copies to go back to and none that could disagree with the game:
 
-    saved      what Save last recorded: side A of a comparison, and where Revert returns
+    saved      what Keep last recorded: side A of a comparison, and where Revert returns
     original   what was live the first time the addon ran: the way back to before it
 
     Catalog.lua   the knobs, as data
@@ -29,7 +29,7 @@ Nothing here runs while the game is idle: the addon acts on a command, a click o
 drag, and at login.
 ]]
 
-local VERSION = "0.4.1"
+local VERSION = "0.5.0"
 
 local Util = LibStub("LibICUtil-1.0")
 local Test = LibStub("LibICTest-1.0")
@@ -66,7 +66,7 @@ Store.Register(addonName, {
         settings = {
             debug = false,
             -- The preset that "on" returns to.
-            upscale = { last = "quality" },
+            upscale = { last = "crisp" },
             -- The warning about experimental settings is shown before the panel, once a
             -- session, until its box is ticked.
             skipWarning = false,
@@ -118,6 +118,8 @@ end
 -- Turns the live settings into `target`. Says what it did under the name `what`, unless
 -- `quiet`: a slider being dragged would fill the chat. A refusal is always said.
 function ns.ApplyTarget(target, what, quiet)
+    -- Any other change makes the one step back stale: it would undo more than it offered to.
+    ns.undo = nil
     local plan = ns.Model.Plan(target, ns.Apply.Live(), ns.Apply.Knobs())
     if #plan == 0 then
         if not quiet then out.Printf("%s: nothing to change.", what) end
@@ -148,7 +150,7 @@ end
 function ns.ApplyPreset(preset)
     local target = ns.Model.Preset(preset, ns.Apply.Limits(), ns.Catalog.FSR)
     if preset.scale < 1 then ns.db.settings.upscale.last = preset.key end
-    ns.ApplyTarget(target, preset.label)
+    ns.ApplyTarget(target, "Upscaling " .. preset.label)
 end
 
 -- One knob, from a control in the panel. The value is the variable's own, not the
@@ -209,6 +211,7 @@ function ns.ApplyLevel(preset)
     end
     ns.db.settings.picked = true
     local live = ns.Apply.Live()
+    local before = preset.also and live
     local held = HeldExtras(live)
     local line = string.format("%s quality: level %s, and the levels beneath it", preset.label,
         ns.Model.Format(knob, preset.level))
@@ -269,6 +272,8 @@ function ns.ApplyLevel(preset)
         ns.SetKnob(knob, preset.level)
     end
     out.Print(line .. ".")
+    -- Extreme moves dozens of settings: one step puts them all back.
+    if before then ns.OfferUndo(preset.label, before) end
     ns.AskRestart()
 end
 
@@ -279,24 +284,41 @@ function ns.RevertKnobs(knobs, what)
     ns.ApplyTarget(target, what)
 end
 
-function ns.Save()
+-- The game already remembers every change; this only moves the point Revert returns to.
+function ns.Keep()
     local changed = #ns.Changes()
     ns.db.saved = ns.Apply.Live()
-    out.Printf("saved, with %d %s since the last save.", changed, Util.Plural(changed, "change"))
+    out.Printf("kept: Revert now returns here (%d %s since the last Keep).", changed, Util.Plural(changed, "change"))
     RefreshPanel()
 end
 
 function ns.Revert()
-    ns.ApplyTarget(ns.db.saved, "back to the saved set")
+    ns.ApplyTarget(ns.db.saved, "back to the kept set")
 end
 
 function ns.Defaults()
     ns.ApplyTarget(ns.Apply.Defaults(), "the client's defaults")
-    out.Print("Revert undoes this; Save keeps it.")
+    out.Print("Revert undoes this; Keep makes it the set Revert returns to.")
 end
 
 function ns.Restore()
     ns.ApplyTarget(ns.db.original, "back to before RenderTuner")
+end
+
+-- One step back after a change the player did not make setting by setting (Auto-set,
+-- Extreme): `before` is every setting as it was. Any other change drops it.
+function ns.OfferUndo(label, before)
+    ns.undo = { label = label, before = before }
+    RefreshPanel()
+end
+
+function ns.Undo()
+    local step = ns.undo
+    if not step then
+        out.Print("nothing to undo.")
+        return
+    end
+    ns.ApplyTarget(step.before, "undo " .. step.label)
 end
 
 -- Asks, in a dialog, to restart the graphics engine when a change is waiting on it, so the
@@ -328,18 +350,20 @@ end
 
 local HELP = {
     { "", "open or close the panel" },
-    { "status", "the render scale, and how many settings differ from the saved set" },
+    { "status", "the render scale, and how many settings differ from the kept set" },
     { "preset [name]", "list the upscaling presets, or use one" },
     { "on | off", "upscale with the last preset used, or go back to native" },
     { "quality [name]", "list the overall quality presets, or use one" },
-    { "list [group | changed]", "the groups, the settings in one, or the ones that differ from saved" },
+    { "list [group | changed]", "the groups, the settings in one, or the ones that differ from kept" },
     { "set <variable> <value>", "set one console variable from the catalogue" },
-    { "save", "record the settings as they are now as the saved set" },
-    { "revert", "go back to the saved set" },
+    { "keep", "record the settings as they are now as the set Revert returns to (save does the same)" },
+    { "revert", "go back to the kept set" },
+    { "undo", "put back what the last Auto-set or Extreme changed" },
     { "defaults", "set everything to the client's defaults" },
     { "restore", "go back to how things were before RenderTuner first ran" },
     { "restart", "restart the graphics engine, for the changes that need it" },
     { "check", "measure the frame rate and suggest a preset" },
+    { "auto", "measure the frame rate and take the step it suggests (the panel's Auto-set)" },
     { "probe, capture ...", "questions for the client, used while building this" },
     { "test", "run the built-in checks" },
     { "help", "this list" },
@@ -400,7 +424,7 @@ end
 COMMANDS.on = function()
     if not Ready() then return end
     local preset = ns.Model.FindPreset(ns.Catalog.PRESETS, ns.db.settings.upscale.last)
-        or ns.Model.FindPreset(ns.Catalog.PRESETS, "quality")
+        or ns.Model.FindPreset(ns.Catalog.PRESETS, "crisp")
     ns.ApplyPreset(preset)
 end
 
@@ -417,7 +441,7 @@ COMMANDS.list = function(rest)
     if want == "changed" then
         local changes = ns.Changes()
         if #changes == 0 then
-            out.Print("everything is as saved.")
+            out.Print("everything is as kept.")
             return
         end
         for _, change in ipairs(changes) do
@@ -438,7 +462,7 @@ COMMANDS.list = function(rest)
             out.Printf("  %s (%s): %d %s%s", group.label, group.key, count, Util.Plural(count, "setting"),
                 changed > 0 and string.format(", |cffffcc00%d changed|r", changed) or "")
         end
-        out.Print("/tuner list <group> shows one; /tuner list changed shows what differs from saved.")
+        out.Print("/tuner list <group> shows one; /tuner list changed shows what differs from kept.")
         return
     end
 
@@ -479,7 +503,7 @@ COMMANDS.set = function(rest)
 end
 
 -- The commands that are also buttons in the panel.
-for word, action in pairs({ save = "Save", revert = "Revert", defaults = "Defaults", restore = "Restore",
+for word, action in pairs({ keep = "Keep", save = "Keep", undo = "Undo", revert = "Revert", defaults = "Defaults", restore = "Restore",
     restart = "Restart" }) do
     COMMANDS[word] = function()
         if not Ready() then return end
@@ -515,6 +539,11 @@ end
 COMMANDS.check = function()
     if not Ready() then return end
     ns.Check.Start(true)
+end
+
+COMMANDS.auto = function()
+    if not Ready() then return end
+    ns.Check.Start(true, nil, true)
 end
 
 COMMANDS.test = function()
