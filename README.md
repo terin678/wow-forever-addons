@@ -8,7 +8,7 @@ Addons for WoW Forever (client 1.60.1, interface
 | --- | --- | --- |
 | [ICKit](AddonProjects/forever/ICKit) | The shared kit the others build on: Forever theme, widgets, sliders, lists, gallery (`/ickit`) | [Docs/ICKit.md](Docs/ICKit.md) |
 | [Stickies](AddonProjects/forever/Stickies) | Notes on the screen, with a minimap and Addon Compartment entry | [Docs/Stickies.md](Docs/Stickies.md) |
-| [RenderTuner](AddonProjects/forever/RenderTuner) | A live control for about 140 graphics settings, upscaling and quality presets, search and undo (`/tuner`) | [Docs/RenderTuner.md](Docs/RenderTuner.md) |
+| [RenderTuner](AddonProjects/forever/RenderTuner) | A live control for about 140 graphics settings, upscaling and quality presets, search, Auto-set and undo (`/tuner`) | [Docs/RenderTuner.md](Docs/RenderTuner.md) |
 
 ## Install
 

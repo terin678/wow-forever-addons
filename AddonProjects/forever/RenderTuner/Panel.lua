@@ -4,24 +4,29 @@ local addonName, ns = ...
 The panel: every knob in the catalogue as a control, changed live while the world is in
 view behind it.
 
-    +------------------------------------------------------------------------+
-    | RenderTuner  142 fps        Quality 67%, 2 unsaved   Peek  Compact   x |  drag the bar
-    | Upscaling  [Potato] [Performance] [Balanced] [Quality] [Native]        |  render scale, low to high
-    | Quality    [Low] [Fair] [Good] [High] [Ultra] [Extreme]                |  the game's 1 to 10 level
-    | [Save] [Revert] [More...]  [Search settings      ]  [Restart graphics] |
-    | Changed (2)        | Upscaling   Render scale, the filter...  [Revert] |
-    | PICTURE            | Render scale      <---o------->  67%      undo    |
-    |   Upscaling (1)    | Resample filter   [ FSR 1.0      v ]              |
-    |   Anti-aliasing    | Sharpening        <------o---->  1.8              |
-    | DETAIL             |                                                   |
-    |   ...              | what the setting under the pointer does           |
-    | Advanced +         +---------------------------------------------------+
-    +------------------------------------------------------------------------+
+    +--------------------------------------------------------------------------------+
+    | RenderTuner  142 fps   Upscaling 67% Crisp, 2 changed   Peek  Compact   x      |  drag the bar
+    | Upscaling  [Potato] [Performance] [Balanced] [Crisp] [Native]                  |  render scale, low to high
+    | Quality    [Low] [Fair] [Good] [High] [Ultra] [Extreme]                        |  the game's 1 to 10 level
+    |            a bar under the level the game recommends                           |
+    | [Keep (2)] [Revert] [More...] [Search]   [Restart graphics] [Undo] [Auto-set]  |
+    | Changed (2)        | Upscaling   Render scale, the filter...   [Revert these]  |
+    | PICTURE            | Render scale      <---o------->  67%      [Revert]        |
+    |   Upscaling (1)    | Resample filter   [ FSR 1.0      v ]                      |
+    |   Anti-aliasing    | Sharpening        <------o---->  1.8                      |
+    | DETAIL             |                                                           |
+    |   ...              | what the setting under the pointer does                   |
+    | Advanced +         +-----------------------------------------------------------+
+    +--------------------------------------------------------------------------------+
+
+Restart graphics shows only while a change waits on the engine, and Undo only for the one
+step after Auto-set or Extreme. Auto-set counts down its measurement on its own button
+("Measuring... 6") and says what it did in the title bar for a few seconds.
 
 Down the left are "Changed" and the groups, in three clusters, the last folded away; the
 rows on the right are the knobs of the one picked, or of whatever the search box finds, in a
-view that scrolls. A row whose value differs from the saved set is in the accent colour and
-gains an undo; its group shows a count. Clicking a row's name offers its saved value and the
+view that scrolls. A row whose value differs from the kept set is in the accent colour and
+gains a Revert; its group shows a count. Clicking a row's name offers its kept value and the
 client's default; clicking a slider's number types one. The line under the rows says what
 the setting under the pointer does.
 
@@ -31,8 +36,9 @@ slider is held it goes half clear.
 
 This file decides nothing about a value. It shows what Apply.Live() reads and hands what
 the player did to the actions in Core.lua, which call Refresh() back. Rows are made the
-first time they are needed and kept. The only thing that runs on a timer is the frame
-rate in the title bar, twice a second, and only while the panel is open.
+first time they are needed and kept. What runs on a timer: the frame rate in the title
+bar, twice a second, only while the panel is open; and, for a few seconds after Auto-set,
+the line that says what it did.
 ]]
 
 local Util = LibStub("LibICUtil-1.0")
