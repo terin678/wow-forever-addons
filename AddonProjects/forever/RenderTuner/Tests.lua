@@ -436,8 +436,8 @@ T.Case("Model.Recommended, Hint, ExtremeNote: the client's pick, and a word befo
     T.Eq(Model.Hint("base", high, true, high, 6), "base", "no hint at the recommended preset")
     T.Eq(Model.Hint("base", nil, nil, ultra, nil), "base", "nor without a recommendation")
     local hint = Model.Hint("base", high, true, ultra, 6)
-    T.True(hint:find("level 7 of 10", 1, true) and hint:find("High uses it", 1, true), "it names the level and the button")
-    T.True(Model.Hint("base", rec, false, ultra, 5):find("Good is the closest", 1, true), "or the closest")
+    T.True(hint:find("level 7 of 10", 1, true) and hint:find("High (the bar under it) uses it", 1, true), "it names the level and the button")
+    T.True(Model.Hint("base", rec, false, ultra, 5):find("Good (the bar under it) is the closest", 1, true), "or the closest")
     T.True(hint:sub(-4) == "base", "and ends with the usual hint")
 
     T.Eq(Model.ExtremeNote(90, 40), nil, "a healthy frame rate gets no note")
@@ -814,6 +814,28 @@ if IC_HEADLESS then
             T.Eq(Model.FindPreset(Catalog.PRESETS, "quality").key, "crisp", "the old name for Crisp still finds it")
             run("preset quality")
             T.Eq(cvars.RenderScale, "0.67", "so /tuner preset quality still works")
+        end)
+    end)
+
+    T.Case("Panel: the recommended quality level keeps its mark, picked or not", function()
+        WithClient(function(cvars, sets, run)
+            ns.Baseline()
+            ns.db.settings.picked = nil
+            run("")
+            local function Marked()
+                local keys = {}
+                for _, preset in ipairs(Catalog.LEVELS) do
+                    if ns.Panel.LevelButton(preset.key).rec:IsShown() then keys[#keys + 1] = preset.key end
+                end
+                return table.concat(keys, ",")
+            end
+            local before = Marked()
+            T.True(before ~= "" and not before:find(","), "one button carries the mark")
+            run("quality high")
+            T.True(ns.db.settings.picked, "choosing a level is what used to hide the hint")
+            T.Eq(Marked(), before, "and the mark stays")
+            run("quality low")
+            T.Eq(Marked(), before, "wherever the level goes")
         end)
     end)
 

@@ -459,7 +459,7 @@ end
 -- client's recommendation while the settings are at some other quality preset.
 function Model.Hint(base, recommended, exact, current, defaultLevel)
     if not recommended or recommended == current then return base end
-    local text = string.format("The game recommends quality level %d of 10 for this machine; %s %s. ",
+    local text = string.format("The game recommends quality level %d of 10 for this machine; %s (the bar under it) %s. ",
         math.floor(defaultLevel + 1.5), recommended.label, exact and "uses it" or "is the closest")
     return text .. base
 end

@@ -503,12 +503,23 @@ local function Build()
         end
         local rec, exact = Recommendation()
         if rec == preset then
-            tip:AddLine(exact and "The game's recommended level for this machine."
-                or "The closest to the game's recommended level for this machine.", 0.5, 1, 0.5, true)
+            tip:AddLine(exact and "The game's recommended level for this machine (the bar under the button)."
+                or "The closest to the game's recommended level for this machine (the bar under the button).",
+                0.5, 1, 0.5, true)
         end
         local note = preset.experimental and Model.ExtremeNote(ns.Apply.Framerate(), LOW_FPS)
         if note then tip:AddLine(note, 1, 0.5, 0.25, true) end
     end)
+
+    -- The game's recommended level for this machine keeps a bar under its button for good,
+    -- whichever level is in use: a shape, so it does not depend on telling two colours apart.
+    for _, b in pairs(levelButtons) do
+        b.rec = b:CreateTexture(nil, "OVERLAY")
+        b.rec:SetHeight(2)
+        b.rec:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", 4, 3)
+        b.rec:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -4, 3)
+        b.rec:Hide()
+    end
 
     -- Actions
     local gap = 4
@@ -814,12 +825,18 @@ function Panel.Refresh()
     end
     local level = Model.LevelOf(live.graphicsQuality, Catalog.LEVELS, live, ns.Excused)
     local rec, exact = Recommendation()
-    -- Said until the player has chosen a quality preset once; the button's tooltip keeps saying it.
+    -- Said in words until the player has chosen a quality preset once; the bar under the
+    -- recommended button and its tooltip keep saying it.
     idleHint = ns.db.settings.picked and HINT or Model.Hint(HINT, rec, exact, level, defaultLevel)
     if not hovering then frame.help:SetText(idleHint) end
     for _, each in ipairs(Catalog.LEVELS) do
         local b = levelButtons[each.key]
         b:SetKind(each == level and "accent" or "normal")
+        -- Dark on the gold of the one in use, green on the rest.
+        local colors = Theme.Current().colors
+        local mark = each == level and colors.accentText or colors.good
+        b.rec:SetColorTexture(mark.r, mark.g, mark.b, 1)
+        b.rec:SetShown(each == rec)
         -- The one that can crash the game is orange until it is the chosen one.
         b:SetLabel((each.experimental and each ~= level) and ("|cffff8040" .. each.label .. "|r") or each.label)
     end
@@ -1036,6 +1053,11 @@ end
 
 function Panel.IsCompact()
     return Compact()
+end
+
+-- The Quality strip's button for a preset, for the cases.
+function Panel.LevelButton(key)
+    return levelButtons[key]
 end
 
 function Panel.Frame()
