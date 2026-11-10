@@ -411,6 +411,14 @@ T.Case("Model.Median, CheckDue, Advise: when the check runs, and what a frame ra
     local head, body, button = Model.AdviseText(Model.Advise(25, 1, good, presets, levels, limits), limits)
     T.True(head:find("25 fps", 1, true) and body:find("Quality 67%", 1, true) and button == "Use Quality 67%", "the words")
     T.Eq(select(3, Model.AdviseText(Model.Advise(60, 1, good, presets, levels, limits), limits)), nil, "fine has no button")
+
+    T.Eq(Model.AutoLine(Model.Advise(25, 1, good, presets, levels, limits), "Native", limits),
+        "Auto-set: Upscaling Quality 67%, was Native", "Auto-set names the axis, the step and what it replaced")
+    T.Eq(Model.AutoLine(Model.Advise(140, 1, good, presets, levels, limits), "Good", limits),
+        "Auto-set: Quality High, was Good", "a quality step says Quality")
+    T.Eq(Model.AutoLine(Model.Advise(140, 1, good, presets, levels, limits), nil, limits),
+        "Auto-set: Quality High", "with nothing named to go back to, it leaves that out")
+    T.Eq(Model.AutoLine(Model.Advise(60, 1, good, presets, levels, limits), "Good", limits), nil, "no step, no line")
 end)
 
 T.Case("Model.Recommended, Hint, ExtremeNote: the client's pick, and a word before Extreme", function()
@@ -785,6 +793,30 @@ if IC_HEADLESS then
             auto:GetScript("OnClick")(auto)
             ns.Check.Start = start
             T.True(started, "a click measures, and asks for the step to be taken")
+        end)
+    end)
+
+    T.Case("Check: Auto-set counts down while it measures, then says what it did", function()
+        WithClient(function(cvars, sets, run)
+            cvars.graphicsQuality = "4"
+            cvars.vsync = "0"
+            ns.Baseline()
+            run("")
+            local frame = ns.Panel.Frame()
+            local tick, timers = nil, C_Timer
+            C_Timer = { After = function() end, NewTicker = function(_, fn) tick = fn return {} end }
+            run("auto")
+            T.True(ns.Check.IsRunning(), "the command starts the measurement")
+            T.Eq(frame.auto.label:GetText(), "Measuring... 6", "the button says so, with the seconds left")
+            tick()
+            tick()
+            T.Eq(frame.auto.label:GetText(), "Measuring... 5", "and counts down")
+            for _ = 3, 12 do tick() end
+            C_Timer = timers
+            T.True(not ns.Check.IsRunning(), "twelve readings end it")
+            T.Eq(frame.auto.label:GetText(), "Auto-set", "the button is itself again")
+            T.True(frame.status:GetText():find("^Auto%-set: Quality High, was "), "the title bar says what it did")
+            T.Eq(cvars.graphicsQuality, "6", "and the step is taken")
         end)
     end)
 

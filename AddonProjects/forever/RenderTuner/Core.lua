@@ -340,6 +340,7 @@ local HELP = {
     { "restore", "go back to how things were before RenderTuner first ran" },
     { "restart", "restart the graphics engine, for the changes that need it" },
     { "check", "measure the frame rate and suggest a preset" },
+    { "auto", "measure the frame rate and take the step it suggests (the panel's Auto-set)" },
     { "probe, capture ...", "questions for the client, used while building this" },
     { "test", "run the built-in checks" },
     { "help", "this list" },
@@ -515,6 +516,11 @@ end
 COMMANDS.check = function()
     if not Ready() then return end
     ns.Check.Start(true)
+end
+
+COMMANDS.auto = function()
+    if not Ready() then return end
+    ns.Check.Start(true, nil, true)
 end
 
 COMMANDS.test = function()

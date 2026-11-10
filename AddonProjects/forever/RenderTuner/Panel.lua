@@ -60,6 +60,8 @@ local ROW_H = 24
 local LABEL_W = 200
 local CONTROL_W = 240
 local UNDO_W = 44
+local AUTO_W = 100          -- wide enough for "Measuring... 6"
+local FLASH_FOR = 8         -- seconds Auto-set's answer holds the title bar's status
 -- Bar, the two preset strips, the actions, and the gaps between them.
 local TOP = BAR_H + PAD + BUTTON_H + STRIP_GAP + BUTTON_H + PAD + BUTTON_H + PAD
 local ROWS_X = PAD + GROUP_W + PAD
@@ -98,6 +100,8 @@ local ticker                -- the frame rate's timer, alive only while the pane
 local peeking = false       -- Peek is held
 local holding = false       -- a slider is held
 local laidOut               -- which layout Panel.Layout last made
+local measuring             -- seconds left in the frame rate check, or nil
+local flashText, flashId    -- a line that holds the title bar's status for a while, and which one
 
 local function Place()
     return ns.cdb and ns.cdb.panel
@@ -335,6 +339,21 @@ end
 -- The frame
 --------------------------------------------------------------------------------
 
+-- Auto-set's button: its name, or the seconds left while the frame rate is measured.
+local function ShowAuto()
+    local button = frame and frame.auto
+    if not button then return end
+    if measuring then
+        button:Disable()
+        button:SetLabel("Measuring... " .. measuring)
+        button:SetTextRole("textDim")
+    else
+        button:Enable()
+        button:SetLabel("Auto-set")
+        button:SetTextRole(false)
+    end
+end
+
 local function ClearSearch()
     search = ""
     if frame then frame.search:SetText("") end
@@ -525,13 +544,15 @@ local function Build()
     })
     p.search:SetPoint("LEFT", more, "RIGHT", 12, 0)
 
-    p.auto = W.Button(p, "Auto-set", 80, BUTTON_H, { onClick = function() ns.Check.Start(true, nil, true) end })
+    p.auto = W.Button(p, "Auto-set", AUTO_W, BUTTON_H, { onClick = function() ns.Check.Start(true, nil, true) end })
     p.auto:SetPoint("TOPRIGHT", p, "TOPRIGHT", -PAD, actionsY)
     W.Tooltip(p.auto, function(tip)
         tip:AddLine("Auto-set")
-        tip:AddLine("Measures your frame rate for a few seconds, then takes one step: down if it is low, up "
-            .. "if there is room. With nothing to change, it says so. Stay where you are, out of combat.",
-            1, 1, 1, true)
+        tip:AddLine("Measures your frame rate for about six seconds, then takes one step. Low: Upscaling "
+            .. "steps down first, then Quality once Upscaling is at its lowest. Room to spare: the reverse, "
+            .. "Upscaling up toward Native first, then Quality. With nothing to change, it says so. "
+            .. "Stay where you are, out of combat.", 1, 1, 1, true)
+        tip:AddLine("The same as /tuner auto.", 0.7, 0.7, 0.7, true)
     end)
 
     p.restart = W.Button(p, "Restart graphics", 130, BUTTON_H, { kind = "danger", onClick = function() ns.Restart() end })
@@ -792,10 +813,31 @@ function Panel.Refresh()
     end
 
     local scale = Model.Find(knobs, "RenderScale")
-    frame.status:SetText(Model.Brief(scale and Model.Format(scale, live.RenderScale) or "?", preset, changed))
+    frame.status:SetText(flashText or Model.Brief(scale and Model.Format(scale, live.RenderScale) or "?", preset, changed))
     frame.save:SetKind(changed > 0 and "accent" or "normal")
     frame.restart:SetShown(ns.pendingEngine ~= nil)
+    ShowAuto()
     Panel.Layout()
+end
+
+-- The frame rate check is running (seconds left) or finished (nil): Auto-set counts down and
+-- cannot be clicked again meanwhile, so a second click is not met with silence.
+function Panel.Measuring(left)
+    measuring = left
+    ShowAuto()
+end
+
+-- Says `text` in the title bar's status for a few seconds, over the usual one.
+function Panel.Flash(text)
+    flashText = text
+    flashId = (flashId or 0) + 1
+    local mine = flashId
+    C_Timer.After(FLASH_FOR, function()
+        if flashId ~= mine then return end
+        flashText = nil
+        if frame and frame:IsShown() then Panel.Refresh() end
+    end)
+    if frame and frame:IsShown() then Panel.Refresh() end
 end
 
 -- A group's key, or "changed" for everything that differs from saved.

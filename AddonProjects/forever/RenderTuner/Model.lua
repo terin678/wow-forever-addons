@@ -581,6 +581,17 @@ function Model.AdviseText(advice, limits)
     return head, "That leaves room. " .. why, "Use " .. label
 end
 
+-- What Auto-set did, for the title bar and the chat: "Auto-set: Upscaling Balanced 58%, was
+-- Native". `was` is the name of what it replaced, or nil when that had none (a custom level).
+-- Nil when the advice took no step.
+function Model.AutoLine(advice, was, limits)
+    if not advice or not advice.preset then return nil end
+    local scale = advice.axis == "scale"
+    return string.format("Auto-set: %s %s%s", scale and "Upscaling" or "Quality",
+        scale and Model.PresetLabel(advice.preset, limits) or advice.preset.label,
+        was and (", was " .. was) or "")
+end
+
 -- The text on a preset's button in the upscaling row: its name and the share of the
 -- screen's pixels it draws, as the client will take it.
 function Model.PresetLabel(preset, limits)
