@@ -104,8 +104,10 @@ function Check.Show(fps, auto)
             was = level and level.label
         end
         local line = Model.AutoLine(advice, was, limits)
-        ns.Print(head .. " " .. line .. ".")
+        ns.Print(head .. " " .. line .. ". /tuner undo puts it back.")
+        local before = ns.Apply.Live()
         Take(advice)
+        ns.OfferUndo("Auto-set", before)
         if ns.Panel then ns.Panel.Flash(line) end
         return advice
     end

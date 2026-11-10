@@ -387,7 +387,7 @@ T.Case("Model.Median, CheckDue, Advise: when the check runs, and what a frame ra
     local good, ultra = Model.FindPreset(levels, "good"), Model.FindPreset(levels, "ultra")
     local advice = Model.Advise(25, 1, good, presets, levels, limits)
     T.Eq(advice.kind, "low", "a low frame rate")
-    T.Eq(advice.axis .. ":" .. advice.preset.key, "scale:quality", "from native, one upscaling step down")
+    T.Eq(advice.axis .. ":" .. advice.preset.key, "scale:crisp", "from native, one upscaling step down")
     advice = Model.Advise(25, 0.58, good, presets, levels, limits)
     T.Eq(advice.preset.key, "performance", "from Balanced, the next below")
     advice = Model.Advise(25, 0.3334, good, presets, levels, limits)
@@ -409,11 +409,11 @@ T.Case("Model.Median, CheckDue, Advise: when the check runs, and what a frame ra
     T.True(select(2, Model.AdviseText(advice, limits)):find("Vertical sync", 1, true), "and the window says why")
 
     local head, body, button = Model.AdviseText(Model.Advise(25, 1, good, presets, levels, limits), limits)
-    T.True(head:find("25 fps", 1, true) and body:find("Quality 67%", 1, true) and button == "Use Quality 67%", "the words")
+    T.True(head:find("25 fps", 1, true) and body:find("Crisp 67%", 1, true) and button == "Use Crisp 67%", "the words")
     T.Eq(select(3, Model.AdviseText(Model.Advise(60, 1, good, presets, levels, limits), limits)), nil, "fine has no button")
 
     T.Eq(Model.AutoLine(Model.Advise(25, 1, good, presets, levels, limits), "Native", limits),
-        "Auto-set: Upscaling Quality 67%, was Native", "Auto-set names the axis, the step and what it replaced")
+        "Auto-set: Upscaling Crisp 67%, was Native", "Auto-set names the axis, the step and what it replaced")
     T.Eq(Model.AutoLine(Model.Advise(140, 1, good, presets, levels, limits), "Good", limits),
         "Auto-set: Quality High, was Good", "a quality step says Quality")
     T.Eq(Model.AutoLine(Model.Advise(140, 1, good, presets, levels, limits), nil, limits),
@@ -599,14 +599,14 @@ end)
 
 T.Case("Model.Line, Status: lines of text", function()
     T.True(Model.Line(SLIDER, 0.67, 0.67):find("Slide |cff888888S|r: 67%", 1, true), "label, variable, value")
-    T.Eq(Model.Line(SLIDER, 0.67, 0.67):find("saved", 1, true), nil, "nothing more when it is as saved")
-    T.True(Model.Line(SLIDER, 0.67, 1):find("saved: 100%", 1, true), "the saved value when it differs")
+    T.Eq(Model.Line(SLIDER, 0.67, 0.67):find("kept", 1, true), nil, "nothing more when it is as kept")
+    T.True(Model.Line(SLIDER, 0.67, 1):find("kept: 100%", 1, true), "the kept value when it differs")
 
-    T.Eq(Model.Status("67%", { label = "Quality" }, 0), "render scale 67% (Quality), everything as saved.", "settled")
-    T.Eq(Model.Status("80%", nil, 1), "render scale 80%, 1 setting differs from the saved set.", "one change")
-    T.Eq(Model.Status("80%", nil, 3), "render scale 80%, 3 settings differ from the saved set.", "several")
-    T.Eq(Model.Brief("67%", { label = "Quality" }, 0), "67% Quality", "short, for a title bar")
-    T.Eq(Model.Brief("80%", nil, 2), "80%, 2 unsaved", "with what is unsaved")
+    T.Eq(Model.Status("67%", { label = "Crisp" }, 0), "render scale 67% (Crisp), everything as kept.", "settled")
+    T.Eq(Model.Status("80%", nil, 1), "render scale 80%, 1 setting differs from the kept set.", "one change")
+    T.Eq(Model.Status("80%", nil, 3), "render scale 80%, 3 settings differ from the kept set.", "several")
+    T.Eq(Model.Brief("67%", { label = "Crisp" }, 0), "Upscaling 67% Crisp", "short, for a title bar, and about the Upscaling row")
+    T.Eq(Model.Brief("80%", nil, 2), "Upscaling 80%, 2 changed", "with what has changed")
     T.True(Model.RestartHint("gx"):find("/tuner restart", 1, true), "a restart hint names the command")
     T.Eq(Model.RestartHint(nil), nil, "no need, no hint")
 end)
@@ -616,8 +616,8 @@ end)
 --------------------------------------------------------------------------------
 
 T.Case("LoadLines: the version and where things stand", function()
-    T.Eq(ns.LoadLines("0.1.0", "render scale 67% (Quality), everything as saved.")[1],
-        "v0.1.0 loaded: render scale 67% (Quality), everything as saved. /tuner opens the panel.", "one line")
+    T.Eq(ns.LoadLines("0.1.0", "render scale 67% (Crisp), everything as kept.")[1],
+        "v0.1.0 loaded: render scale 67% (Crisp), everything as kept. /tuner opens the panel.", "one line")
 end)
 
 --------------------------------------------------------------------------------
@@ -673,6 +673,7 @@ if IC_HEADLESS then
         -- The warning has been dismissed for good, except in the case that is about it.
         ns.db = { settings = { debug = false, upscale = { last = "quality" }, skipWarning = true } }
         ns.cdb = { panel = { group = "upscale" } }
+        ns.undo = nil
 
         local ok, err = pcall(body, cvars, sets, SlashCmdList.RENDERTUNER, asked)
 
@@ -728,13 +729,18 @@ if IC_HEADLESS then
             T.Eq(#sets, before, "a value not offered, an unknown variable and a word set nothing")
 
             run("revert")
-            T.Eq(cvars.RenderScale, "1", "revert returns to the saved set")
+            T.Eq(cvars.RenderScale, "1", "revert returns to the kept set")
             T.Eq(cvars.ResampleSharpness, "0.2", "all of it")
             T.Eq(#ns.Changes(), 0, "nothing differs again")
 
             run("preset balanced")
+            run("keep")
+            T.Eq(ns.db.saved.RenderScale, 0.58, "keep records what is live")
+            run("preset native")
             run("save")
-            T.Eq(ns.db.saved.RenderScale, 0.58, "save records what is live")
+            T.Eq(ns.db.saved.RenderScale, 1, "and save, its old name, still does")
+            run("preset balanced")
+            run("keep")
             T.Eq(ns.db.original.RenderScale, 1, "and leaves the original alone")
             run("restore")
             T.Eq(cvars.RenderScale, "1", "restore goes back to before the addon")
@@ -778,6 +784,36 @@ if IC_HEADLESS then
             T.True(not ns.Check.IsShown(), "and shows no window")
             ns.Check.Show(60, true)
             T.True(ns.Check.IsShown(), "with nothing to take, the window says so")
+        end)
+    end)
+
+    T.Case("Undo: one step back after Auto-set or Extreme, gone once anything else changes", function()
+        WithClient(function(cvars, sets, run)
+            cvars.graphicsQuality = "4"
+            cvars.vsync = "0"
+            ns.Baseline()
+            run("")
+            local frame = ns.Panel.Frame()
+            T.Eq(frame.undo:IsShown(), false, "nothing to undo at first")
+            ns.Check.Show(141.6, true)
+            T.Eq(cvars.graphicsQuality, "6", "Auto-set stepped quality up")
+            T.Eq(frame.undo:IsShown(), true, "and offers the way back")
+            run("undo")
+            T.Eq(cvars.graphicsQuality, "4", "undo puts it back")
+            T.Eq(frame.undo:IsShown(), false, "and the button goes")
+
+            ns.Check.Show(141.6, true)
+            run("set Gamma 1.4")
+            T.Eq(ns.undo, nil, "any other change drops it, so it cannot undo more than it offered")
+
+            run("quality extreme")
+            T.Eq(ns.undo and ns.undo.label, "Extreme", "Extreme offers it too")
+            run("undo")
+            T.Eq(cvars.graphicsQuality, "6", "and undo puts back every setting it moved")
+
+            T.Eq(Model.FindPreset(Catalog.PRESETS, "quality").key, "crisp", "the old name for Crisp still finds it")
+            run("preset quality")
+            T.Eq(cvars.RenderScale, "0.67", "so /tuner preset quality still works")
         end)
     end)
 
@@ -932,18 +968,18 @@ if IC_HEADLESS then
             ns.Panel.Search("")
             T.True(ns.Panel.Row("RAIDgraphicsQuality"):IsShown(), "clearing the search brings the group back")
 
-            -- A changed row gains an undo, and the heading a way back for all in view.
+            -- A changed row gains a revert, and the heading a way back for all in view.
             ns.Panel.ShowGroup("colour")
             local gamma = ns.Panel.Row("Gamma")
-            T.Eq(gamma.undo:IsShown(), false, "no undo on a row that is as saved")
+            T.Eq(gamma.revert:IsShown(), false, "no revert on a row that is as kept")
             T.Eq(frame.revertView:IsShown(), false, "and nothing to revert in view")
             gamma.control.inner:GetScript("OnValueChanged")(gamma.control.inner, 1.4)
             T.Eq(cvars.Gamma, "1.4", "changed")
-            T.True(gamma.undo:IsShown(), "the undo appears")
+            T.True(gamma.revert:IsShown(), "the revert appears")
             T.True(frame.revertView:IsShown(), "and the way back for the view")
-            gamma.undo:GetScript("OnClick")(gamma.undo)
-            T.Eq(cvars.Gamma, "1", "undo puts the one setting back")
-            T.Eq(gamma.undo:IsShown(), false, "and goes away again")
+            gamma.revert:GetScript("OnClick")(gamma.revert)
+            T.Eq(cvars.Gamma, "1", "revert puts the one setting back")
+            T.Eq(gamma.revert:IsShown(), false, "and goes away again")
 
             -- The Changed view lists what differs, and keeps a row that has been put back.
             ns.Panel.ShowGroup("changed")
@@ -951,14 +987,14 @@ if IC_HEADLESS then
             T.Eq(changedRows, #ns.Changes(), "one row for each setting that differs from saved")
             T.True(ns.Panel.Row("graphicsQuality"):IsShown(), "the quality level is among them")
             local level = ns.Panel.Row("graphicsQuality")
-            level.undo:GetScript("OnClick")(level.undo)
+            level.revert:GetScript("OnClick")(level.revert)
             T.True(level:IsShown(), "put back, it stays in the list while the view is open")
             T.Eq(select(2, ns.Panel.Counts()), changedRows, "so nothing jumps under the pointer")
             frame.revertView:GetScript("OnClick")(frame.revertView)
             T.Eq(#ns.Changes(), 0, "Revert these puts back everything in view")
             ns.Panel.ShowGroup("changed")
             T.Eq(select(2, ns.Panel.Counts()), 0, "and opened afresh, the view is empty")
-            T.Eq(frame.empty:GetText(), "Nothing differs from the saved set.", "and says so")
+            T.Eq(frame.empty:GetText(), "Nothing differs from the kept set.", "and says so")
 
             -- A long group scrolls. The folded cluster open is the roomiest the view gets.
             ns.Panel.SetAdvanced(true)

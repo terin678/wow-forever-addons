@@ -59,7 +59,8 @@ local HELP_H = 30
 local ROW_H = 24
 local LABEL_W = 200
 local CONTROL_W = 240
-local UNDO_W = 44
+local REVERT_W = 48
+local UNDO_W = 56
 local AUTO_W = 100          -- wide enough for "Measuring... 6"
 local FLASH_FOR = 8         -- seconds Auto-set's answer holds the title bar's status
 -- Bar, the two preset strips, the actions, and the gaps between them.
@@ -69,7 +70,7 @@ local ROWS_W = WIDTH - ROWS_X - PAD
 local CHANGED = "changed"
 local PEEK_ALPHA = 0.08     -- while Peek is held
 local HOLD_ALPHA = 0.4      -- while a slider is held
-local HINT = "Click a setting's name for its saved value or the default. Click a number to type one."
+local HINT = "Click a setting's name for its kept value or the default. Click a number to type one."
 local LOW_FPS = 40              -- below this, Extreme says it will cost more
 local idleHint = HINT           -- the line under the rows with nothing under the pointer
 local hovering = false
@@ -151,7 +152,7 @@ local function RowTip(tip, row)
     tip:AddLine(knob.label)
     tip:AddLine(knob.help, 1, 1, 1, true)
     if knob.experimental then
-        tip:AddLine("Experimental: this one can crash the game. Save a set that works first.", 1, 0.5, 0.25, true)
+        tip:AddLine("Experimental: this one can crash the game. Keep a set that works first.", 1, 0.5, 0.25, true)
     end
     if row.locked then
         tip:AddLine("This client will not change it at the moment: " .. row.locked, 1, 0.3, 0.3, true)
@@ -160,7 +161,7 @@ local function RowTip(tip, row)
     tip:AddDoubleLine("Console variable", knob.cvar, 0.7, 0.7, 0.7, 1, 1, 1)
     tip:AddDoubleLine("Now", Model.Format(knob, live), 0.7, 0.7, 0.7, 1, 1, 1)
     if not Model.Same(live, saved) then
-        tip:AddDoubleLine("Saved", Model.Format(knob, saved), 0.7, 0.7, 0.7, 1, 0.82, 0)
+        tip:AddDoubleLine("Kept", Model.Format(knob, saved), 0.7, 0.7, 0.7, 1, 0.82, 0)
     end
     if defaults and defaults[knob.cvar] ~= nil then
         tip:AddDoubleLine("Client default", Model.Format(knob, defaults[knob.cvar]), 0.7, 0.7, 0.7, 1, 1, 1)
@@ -168,7 +169,7 @@ local function RowTip(tip, row)
     tip:AddDoubleLine("Range", Model.RangeText(knob), 0.7, 0.7, 0.7, 1, 1, 1)
     local need = Model.RestartHint(knob.restart)
     if need then tip:AddLine(need, 1, 0.5, 0.2, true) end
-    tip:AddLine("Click for the saved value or the default", 0.7, 0.7, 0.7)
+    tip:AddLine("Click for the kept value or the default", 0.7, 0.7, 0.7)
 end
 
 -- A change from a control. Turning an experimental knob on is asked about first; the
@@ -189,7 +190,7 @@ local function RowMenu(row)
     local default = defaults and defaults[knob.cvar]
     local items = { { title = knob.label } }
     if saved ~= nil then
-        items[#items + 1] = { text = "Back to saved: " .. Model.Format(knob, saved),
+        items[#items + 1] = { text = "Revert to kept: " .. Model.Format(knob, saved),
             onClick = function() Change(knob, saved) end }
     end
     if default ~= nil then
@@ -236,7 +237,7 @@ end
 
 local function BuildRow(knob)
     local row = CreateFrame("Frame", nil, frame.scroll.content)
-    row:SetSize(LABEL_W + CONTROL_W + 4 + UNDO_W, ROW_H)
+    row:SetSize(LABEL_W + CONTROL_W + 4 + REVERT_W, ROW_H)
     row.knob = knob
     row.locked = false
     row.icIndex = 0
@@ -291,13 +292,13 @@ local function BuildRow(knob)
     end
 
     -- The way back for this one setting, shown only while it differs from saved.
-    row.undo = W.Button(row, "undo", UNDO_W, ROW_H - 6, {
+    row.revert = W.Button(row, "Revert", REVERT_W, ROW_H - 6, {
         kind = "flat", font = "small",
         onClick = function() Change(knob, ns.db.saved[knob.cvar]) end,
     })
-    row.undo:SetPoint("LEFT", row, "LEFT", LABEL_W + CONTROL_W + 4, 0)
-    W.Tooltip(row.undo, function(tip)
-        tip:AddLine("Back to saved")
+    row.revert:SetPoint("LEFT", row, "LEFT", LABEL_W + CONTROL_W + 4, 0)
+    W.Tooltip(row.revert, function(tip)
+        tip:AddLine("Revert to kept")
         tip:AddLine(Model.Format(knob, ns.db.saved[knob.cvar]), 1, 1, 1)
     end)
     return row
@@ -332,7 +333,7 @@ local function UpdateRow(row, live, saved)
     else
         row.name:SetTextRole(changed and "accent" or "text")
     end
-    row.undo:SetShown(changed and row.locked == false)
+    row.revert:SetShown(changed and row.locked == false)
 end
 
 --------------------------------------------------------------------------------
@@ -364,11 +365,11 @@ local function MoreMenu(owner)
         { title = "RenderTuner" },
         { text = "Client defaults...", onClick = function()
             W.Confirm("Set every setting here to the client's defaults for this machine?\n\n"
-                .. "Revert brings the saved set back.", ns.Defaults)
+                .. "Revert brings the kept set back.", ns.Defaults)
         end },
         { text = "Back to before RenderTuner...", onClick = function()
             W.Confirm("Go back to the settings from before RenderTuner first ran?\n\n"
-                .. "Revert brings the saved set back.", ns.Restore)
+                .. "Revert brings the kept set back.", ns.Restore)
         end },
         { divider = true },
         { text = "Check my frame rate", onClick = function() ns.Check.Start(true) end },
@@ -398,7 +399,7 @@ local EXTREME_WARNING = "Extreme is Ultra and then every setting beyond the qual
     .. "up: how far everything is drawn, shadows and light, water and particles, 8x multisampling, a "
     .. "32-bit float render format, HDR output and ray traced shadows, where this machine has them.\n\n"
     .. "It is heavy, and some of it can crash the game or leave it unable to draw the world. "
-    .. "Save a set that works first. Choosing a lower level puts it all back as it was.\n\nTurn it on?"
+    .. "Keep a set that works first. Choosing a lower level, or Undo, puts it all back as it was.\n\nTurn it on?"
 
 local function Build()
     local p = W.Panel(UIParent, {
@@ -512,24 +513,25 @@ local function Build()
     -- Actions
     local gap = 4
     local actionsY = stripY - (BUTTON_H + STRIP_GAP) - BUTTON_H - PAD
-    p.save = W.Button(p, "Save", 70, BUTTON_H, { onClick = function() ns.Save() end })
-    p.save:SetPoint("TOPLEFT", p, "TOPLEFT", PAD, actionsY)
-    W.Tooltip(p.save, function(tip)
-        tip:AddLine("Save")
-        tip:AddLine("Keeps the settings as they are now. Revert returns to them.", 1, 1, 1, true)
+    p.keep = W.Button(p, "Keep", 70, BUTTON_H, { onClick = function() ns.Keep() end })
+    p.keep:SetPoint("TOPLEFT", p, "TOPLEFT", PAD, actionsY)
+    W.Tooltip(p.keep, function(tip)
+        tip:AddLine("Keep")
+        tip:AddLine("Makes the settings as they are now the set Revert returns to. The game already remembers "
+            .. "every change you make; this only moves the point Revert goes back to.", 1, 1, 1, true)
     end)
 
     p.revert = W.Button(p, "Revert", 70, BUTTON_H, { onClick = function() ns.Revert() end })
-    p.revert:SetPoint("LEFT", p.save, "RIGHT", gap, 0)
+    p.revert:SetPoint("LEFT", p.keep, "RIGHT", gap, 0)
     W.Tooltip(p.revert, function(tip)
         tip:AddLine("Revert")
-        tip:AddLine("Puts every setting back to the saved set.", 1, 1, 1, true)
+        tip:AddLine("Puts every setting back to the kept set.", 1, 1, 1, true)
     end)
 
     local more = W.Button(p, "More...", 70, BUTTON_H, { onClick = function(self) MoreMenu(self) end })
     more:SetPoint("LEFT", p.revert, "RIGHT", gap, 0)
 
-    p.search = W.EditBox(p, 190, BUTTON_H, {
+    p.search = W.EditBox(p, 180, BUTTON_H, {
         maxBytes = 40, placeholder = "Search settings",
         onChange = function(text)
             search = Util.Trim(text)
@@ -555,8 +557,18 @@ local function Build()
         tip:AddLine("The same as /tuner auto.", 0.7, 0.7, 0.7, true)
     end)
 
-    p.restart = W.Button(p, "Restart graphics", 130, BUTTON_H, { kind = "danger", onClick = function() ns.Restart() end })
-    p.restart:SetPoint("RIGHT", p.auto, "LEFT", -gap, 0)
+    p.restart = W.Button(p, "Restart graphics", 120, BUTTON_H, { kind = "danger", onClick = function() ns.Restart() end })
+    -- One step back after Auto-set or Extreme, there only until something else changes.
+    p.undo = W.Button(p, "Undo", UNDO_W, BUTTON_H, { onClick = function() ns.Undo() end })
+    p.undo:SetPoint("RIGHT", p.auto, "LEFT", -gap, 0)
+    W.Tooltip(p.undo, function(tip)
+        tip:AddLine(ns.undo and ("Undo " .. ns.undo.label) or "Undo")
+        tip:AddLine("Puts every setting back as it was before. It goes away when you change anything else.",
+            1, 1, 1, true)
+    end)
+    p.undo:Hide()
+
+    p.restart:SetPoint("RIGHT", p.undo, "LEFT", -gap, 0)
     W.Tooltip(p.restart, function(tip)
         tip:AddLine("Restart graphics")
         tip:AddLine("A change you made shows only after the graphics engine restarts. The screen blinks.",
@@ -612,7 +624,7 @@ local function Build()
     p.revertView:SetPoint("RIGHT", p, "TOPRIGHT", -PAD, -(TOP + HEAD_H / 2 - 2))
     W.Tooltip(p.revertView, function(tip)
         tip:AddLine("Revert these")
-        tip:AddLine("Puts the settings in view back to their saved values.", 1, 1, 1, true)
+        tip:AddLine("Puts the settings in view back to their kept values.", 1, 1, 1, true)
     end)
     p.icList = false
 
@@ -714,7 +726,7 @@ function Panel.Refresh()
         -- Kept as it was when the view opened: a setting put back to its saved value
         -- stays in the list, rather than vanishing from under the pointer.
         stickyChanged = stickyChanged or Model.View(knobs, { changed = true }, live, saved, Catalog.GROUPS)
-        list, title, viewKey = stickyChanged, "Changed since the last save", CHANGED
+        list, title, viewKey = stickyChanged, "Changed since the last Keep", CHANGED
         note = string.format("%d %s", #list, Util.Plural(#list, "setting"))
     else
         list, viewKey = Model.View(knobs, { group = current }, live, saved, Catalog.GROUPS), current
@@ -759,7 +771,7 @@ function Panel.Refresh()
     frame.head:SetText(title or "")
     frame.note:SetText(note or "")
     frame.revertView:SetShown(viewChanged > 0)
-    frame.empty:SetText(#list > 0 and "" or (search ~= "" and "No setting matches." or "Nothing differs from the saved set."))
+    frame.empty:SetText(#list > 0 and "" or (search ~= "" and "No setting matches." or "Nothing differs from the kept set."))
 
     -- The groups, each with how many of its knobs differ from saved
     local changedIn, changed = {}, 0
@@ -814,8 +826,11 @@ function Panel.Refresh()
 
     local scale = Model.Find(knobs, "RenderScale")
     frame.status:SetText(flashText or Model.Brief(scale and Model.Format(scale, live.RenderScale) or "?", preset, changed))
-    frame.save:SetKind(changed > 0 and "accent" or "normal")
+    frame.keep:SetKind(changed > 0 and "accent" or "normal")
     frame.restart:SetShown(ns.pendingEngine ~= nil)
+    frame.undo:SetShown(ns.undo ~= nil)
+    -- Restart sits against whichever of the two is there, so no gap is left.
+    frame.restart:SetPoint("RIGHT", ns.undo and frame.undo or frame.auto, "LEFT", -4, 0)
     ShowAuto()
     Panel.Layout()
 end
