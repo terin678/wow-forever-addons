@@ -35,10 +35,15 @@ local function Take(advice)
     elseif advice and advice.axis == "level" then ns.ApplyLevel(advice.preset) end
 end
 
+-- The box says "never again" for the automatic check; it is read as the window closes,
+-- however it closes: a button, or Escape (which hides the frame without asking us).
+local function ReadSkip()
+    if popup and popup.skip then ns.db.settings.check = popup.skip:GetChecked() and "off" or nil end
+end
+
 local function Hide()
     if not popup then return end
-    -- The box says "never again" for the automatic check; it is read as the window closes.
-    ns.db.settings.check = popup.skip:GetChecked() and "off" or nil
+    ReadSkip()
     popup:Hide()
 end
 
@@ -46,6 +51,9 @@ local function Build()
     local p = W.Panel(UIParent, { name = "RenderTunerCheck", width = POPUP_W, height = POPUP_H, strata = "DIALOG" })
     p:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
     p:EnableMouse(true)
+    -- Escape closes it, as it closes the panel.
+    if type(UISpecialFrames) == "table" then UISpecialFrames[#UISpecialFrames + 1] = "RenderTunerCheck" end
+    p:HookScript("OnHide", ReadSkip)
 
     p.title = W.Label(p, "", { font = "title", color = "accent" })
     p.title:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -12)

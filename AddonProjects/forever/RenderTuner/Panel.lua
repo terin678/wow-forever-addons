@@ -49,6 +49,7 @@ local WIDTH = 720
 local PAD = 8
 local BAR_H = 24
 local BUTTON_H = 22
+local BAR_BUTTON_H = 20  -- the title bar's small buttons, as tall as the bar leaves room for
 local STRIP_GAP = 4
 local STRIP_LABEL_W = 70
 local GROUP_W = 170
@@ -103,6 +104,12 @@ local holding = false       -- a slider is held
 local laidOut               -- which layout Panel.Layout last made
 local measuring             -- seconds left in the frame rate check, or nil
 local flashText, flashId    -- a line that holds the title bar's status for a while, and which one
+
+-- The colour code for what is experimental or can crash: the theme's warning colour, since a
+-- fixed orange does not read on every ground.
+local function Warn()
+    return Theme.Hex(Theme.Current().colors.warn)
+end
 
 local function Place()
     return ns.cdb and ns.cdb.panel
@@ -215,7 +222,7 @@ local function ShowHelp(row)
         return
     end
     local text = knob.help or ""
-    if knob.experimental then text = text .. " |cffff8040Experimental: can crash the game.|r" end
+    if knob.experimental then text = text .. " " .. Warn() .. "Experimental: can crash the game.|r" end
     frame.help:SetText(text)
 end
 
@@ -246,7 +253,7 @@ local function BuildRow(knob)
     row.band:SetAllPoints(row)
     row.band:Hide()
 
-    row.name = W.Button(row, Model.Label(knob), LABEL_W - 6, ROW_H - 4, {
+    row.name = W.Button(row, Model.Label(knob, Warn()), LABEL_W - 6, ROW_H - 4, {
         kind = "flat", justify = "LEFT", font = "body", textRole = "text",
         onClick = function() RowMenu(row) end,
     })
@@ -292,7 +299,7 @@ local function BuildRow(knob)
     end
 
     -- The way back for this one setting, shown only while it differs from saved.
-    row.revert = W.Button(row, "Revert", REVERT_W, ROW_H - 6, {
+    row.revert = W.Button(row, "Revert", REVERT_W, ROW_H - 4, {
         kind = "flat", font = "small",
         onClick = function() Change(knob, ns.db.saved[knob.cvar]) end,
     })
@@ -413,6 +420,11 @@ local function Build()
     })
     -- Escape closes it, as it does the game's own windows.
     if type(UISpecialFrames) == "table" then UISpecialFrames[#UISpecialFrames + 1] = "RenderTunerPanel" end
+    -- The warning colour is written into text, so a new theme needs the text written again.
+    Theme.OnChange(function()
+        for _, row in pairs(rows) do row.name:SetLabel(Model.Label(row.knob, Warn())) end
+        if frame and frame:IsShown() then Panel.Refresh() end
+    end)
 
     local bar = W.Panel(p, { role = "raised", edge = false, height = BAR_H })
     bar:SetPoint("TOPLEFT", p, "TOPLEFT", 1, -1)
@@ -425,11 +437,11 @@ local function Build()
     p.fps = W.Label(bar, "", { color = "text" })
     p.fps:SetPoint("LEFT", title, "RIGHT", 12, 0)
 
-    local close = W.Button(bar, "x", 20, 18, { kind = "flat", onClick = function() p:Hide() end })
+    local close = W.Button(bar, "x", 22, BAR_BUTTON_H, { kind = "flat", onClick = function() p:Hide() end })
     close:SetPoint("RIGHT", bar, "RIGHT", -3, 0)
     W.Tooltip(close, function(tip) tip:AddLine("Close") end)
 
-    p.compact = W.Button(bar, "Compact", 62, 18, { kind = "flat", onClick = function() Panel.SetCompact(not Compact()) end })
+    p.compact = W.Button(bar, "Compact", 62, BAR_BUTTON_H, { kind = "flat", onClick = function() Panel.SetCompact(not Compact()) end })
     p.compact:SetPoint("RIGHT", close, "LEFT", -4, 0)
     W.Tooltip(p.compact, function(tip)
         tip:AddLine(Compact() and "Expand" or "Compact")
@@ -438,7 +450,7 @@ local function Build()
     end)
 
     -- Held, not clicked: the panel is nearly clear for as long as the button is down.
-    p.peek = W.Button(bar, "Peek", 42, 18, { kind = "flat" })
+    p.peek = W.Button(bar, "Peek", 42, BAR_BUTTON_H, { kind = "flat" })
     p.peek:SetPoint("RIGHT", p.compact, "LEFT", -4, 0)
     p.peek:HookScript("OnMouseDown", function() Panel.Peek(true) end)
     p.peek:HookScript("OnMouseUp", function() Panel.Peek(false) end)
@@ -838,12 +850,13 @@ function Panel.Refresh()
         b.rec:SetColorTexture(mark.r, mark.g, mark.b, 1)
         b.rec:SetShown(each == rec)
         -- The one that can crash the game is orange until it is the chosen one.
-        b:SetLabel((each.experimental and each ~= level) and ("|cffff8040" .. each.label .. "|r") or each.label)
+        b:SetLabel((each.experimental and each ~= level) and (Warn() .. each.label .. "|r") or each.label)
     end
 
     local scale = Model.Find(knobs, "RenderScale")
     frame.status:SetText(flashText or Model.Brief(scale and Model.Format(scale, live.RenderScale) or "?", preset, changed))
-    frame.keep:SetKind(changed > 0 and "accent" or "normal")
+    -- Gold fill is for the level and preset in use; what is waiting to be kept is said in words.
+    frame.keep:SetLabel(changed > 0 and string.format("Keep (%d)", changed) or "Keep")
     frame.restart:SetShown(ns.pendingEngine ~= nil)
     frame.undo:SetShown(ns.undo ~= nil)
     -- Restart sits against whichever of the two is there, so no gap is left.

@@ -257,8 +257,9 @@ end
 --------------------------------------------------------------------------------
 
 -- A knob's name as it is shown, with the mark an experimental one carries.
-function Model.Label(knob)
-    if knob.experimental then return knob.label .. " |cffff8040experimental|r" end
+-- `warn` is the colour code to put it in: the theme's, which reads on any ground.
+function Model.Label(knob, warn)
+    if knob.experimental then return knob.label .. " " .. (warn or "|cffff8040") .. "experimental|r" end
     return knob.label
 end
 

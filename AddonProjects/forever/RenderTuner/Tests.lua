@@ -564,6 +564,7 @@ end)
 T.Case("Model.Label, WARNING: an experimental knob says so wherever it is named", function()
     local risky = { cvar = "X", label = "Ray traced shadows", kind = "toggle", experimental = true }
     T.Eq(Model.Label(risky), "Ray traced shadows |cffff8040experimental|r", "the mark follows the name")
+    T.Eq(Model.Label(risky, "|cff112233"), "Ray traced shadows |cff112233experimental|r", "in the theme's warning colour when given")
     T.Eq(Model.Label(TOGGLE), "Tog", "a plain knob is only its name")
     T.True(Model.Line(risky, 1, 1):find("experimental", 1, true), "in a listing too")
     T.True(Model.WARNING.body:find("experimental", 1, true), "the warning names the mark")
@@ -777,6 +778,16 @@ if IC_HEADLESS then
             popup.close:GetScript("OnClick")(popup.close)
             T.Eq(ns.db.settings.check, "off", "the box turns the automatic check off")
 
+            local registered
+            for _, name in ipairs(UISpecialFrames) do registered = registered or name == "RenderTunerCheck" end
+            T.True(registered, "Escape closes the window")
+            -- Escape hides the frame without the Close button: the box is read all the same.
+            ns.Check.Show(60)
+            popup.skip:SetChecked(false)
+            popup:GetScript("OnHide")(popup)
+            T.Eq(ns.db.settings.check, nil, "whichever way it closes, the box is read")
+            popup:Hide()
+
             -- Auto-set takes the step without the window.
             cvars.graphicsQuality = "4"
             ns.Check.Show(141.6, true)
@@ -836,6 +847,12 @@ if IC_HEADLESS then
             T.Eq(Marked(), before, "and the mark stays")
             run("quality low")
             T.Eq(Marked(), before, "wherever the level goes")
+
+            -- Keep says what waits to be kept in words; gold fill is for the one in use.
+            local keep = ns.Panel.Frame().keep
+            T.Eq(keep.label:GetText(), "Keep (" .. #ns.Changes() .. ")", "Keep counts the changes")
+            run("keep")
+            T.Eq(keep.label:GetText(), "Keep", "and has nothing to count once kept")
         end)
     end)
 
