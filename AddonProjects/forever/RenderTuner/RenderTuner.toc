@@ -2,10 +2,9 @@
 ## Title: RenderTuner
 ## Notes: Tunes the client's rendering: upscaling presets and a control for every graphics console variable. /tuner opens the panel.
 ## Author: Malexis
-## Version: 0.5.0
+## Version: 0.5.1
 ## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
-## Group: ICKit
-## Category: Impulse Control
+## Category: Graphics
 ## SavedVariables: RenderTunerDB
 ## SavedVariablesPerCharacter: RenderTunerCharDB
 ## Dependencies: ICKit

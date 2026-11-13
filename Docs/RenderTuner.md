@@ -3,7 +3,7 @@
 The one place to tune WoW Forever's graphics: upscaling and quality presets, a live control
 for about 140 console variables, search, and a way back to what you had.
 
-**Version 0.5.0 has the floating panel and the commands**, an Extreme quality preset with
+**Version 0.5.1 has the floating panel and the commands**, an Extreme quality preset with
 the experimental extras, and a panel that can get out of the way of the world it tunes. It
 says which quality level the game recommends for your machine, warns before Extreme when your
 frame rate is already low, and measures your frame rate and takes the step it suggests
@@ -16,6 +16,9 @@ because the game already remembers every change and the button only moves where 
 back to. Auto-set counts down while it measures and says what it did in the title bar;
 **Undo** puts back what Auto-set or Extreme changed; the recommended quality level keeps a
 bar under its button; the frame rate window closes on Escape.
+
+**New in 0.5.1:** the AddOns list shows RenderTuner on its own under a **Graphics** heading,
+not under Impulse Control and ICKit.
 
 ## What the client can and cannot do
 

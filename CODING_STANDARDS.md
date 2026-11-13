@@ -29,7 +29,9 @@ AddonName/
 - A guild addon carries `## Category: Impulse Control` and a `## Group:` naming the addon
   that heads its area, or it sits alone in the AddOns list instead of under the guild
   heading. A `## Group:` value has to be an addon that exists — a made-up name silently
-  ungroups everything using it. `Docs/client-reference.md` has the whole model.
+  ungroups everything using it. `Docs/client-reference.md` has the whole model. The
+  exception is an addon that is a tool for everyone, not a guild one: RenderTuner says
+  `## Category: Graphics` with no `## Group:`, so it stands alone under that heading.
 - Only the addon folder ships. No README, screenshots, or scripts inside it.
 - **No globals.** Every file starts with `local addonName, ns = ...` and hangs what it
   exports off `ns`, which the client gives each addon privately. A module claims its own
