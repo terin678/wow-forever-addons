@@ -402,6 +402,7 @@ Probe.LADDERS = {
     groundEffectDensity = { -1, 0, 8, 16, 48, 64, 128, 256, 512, 1024 },
     groundEffectDist = { -1, 0, 40, 70, 320, 400, 600, 1000, 5000 },
     disableHorizonStart = { -1, 0, 1, 2 },
+    maxLightDist = { 64, 128, 256, 1024, 2048, 2112, 3072, 4096 },
     vrsWorldGeo = { "1x1", "1x2", "2x1", "2x2", "2x4", "4x2", "4x4", "8x8", "junk" },
     vrsParticles = { "1x1", "1x2", "2x1", "2x2", "2x4", "4x2", "4x4", "8x8", "junk" },
     screenshotFormat = { "jpeg", "jpg", "png", "tga", "bmp", "junk" },

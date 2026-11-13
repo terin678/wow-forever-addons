@@ -126,8 +126,7 @@ Catalog.FSR = 3
 -- the rest (how far each kind of thing is drawn, shadow cascades and light range, 8x
 -- multisampling, the render format) are left where the machine's first run put them, and
 -- the client defaults are well short of their ceilings: view distance 7000 of 10000,
--- three shadow cascades of four, a light range of 2048 of 4096, and a 16-bit float render
--- format when 32-bit exists. The levels themselves stop short too: the top ground clutter
+-- three shadow cascades of four, and a 16-bit float render format when 32-bit exists. The levels themselves stop short too: the top ground clutter
 -- level sets a density of 48 where the client takes 256. `also` is that list, with the value each is given, and every
 -- number in it is the top of the knob's own range below.
 --
@@ -156,7 +155,7 @@ Catalog.LEVELS = {
           -- Shadows and light.
           shadowMode = 4, shadowSoft = 1, shadowNumCascades = 4, shadowBlendCascades = 1,
           entityShadowFadeScale = 100, shadowRt = 3,
-          SSAO = 4, volumeFogLevel = 4, maxLightDist = 4096,
+          SSAO = 4, volumeFogLevel = 4, maxLightDist = 2048,
           -- How far everything is drawn, and in how much detail.
           farclip = 10000, horizonClip = 10000, terrainLodDist = 650, wmoLodDist = 650,
           wmoDoodadDist = 2000, doodadLodScale = 200, entityLodDist = 30,
@@ -346,7 +345,8 @@ Catalog.KNOBS = {
     { cvar = "specular", label = "Specular lighting", group = "light", kind = "slider",
       min = 0, max = 1, step = 0.05, help = "Strength of specular highlights." },
     { cvar = "maxLightDist", label = "Light distance", group = "light", kind = "slider",
-      min = 256, max = 4096, step = 64, help = "The farthest a light is drawn from." },
+      -- 2048 is the client's own value and the most it keeps: handed 4096, it stays at 2048.
+      min = 256, max = 2048, step = 64, help = "The farthest a light is drawn from." },
     { cvar = "clusteredShading", label = "Lit transparent surfaces", group = "light", kind = "toggle",
       help = "Lets lights fall on glass, water and other see-through surfaces." },
     { cvar = "forceClusteredShading", label = "Light every transparent surface", group = "light", kind = "toggle",

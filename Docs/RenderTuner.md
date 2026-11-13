@@ -192,15 +192,15 @@ graphics page does.
 
 **What Extreme means.** The game's ten levels move only the dozen or so variables its
 graphics page lists. Everything else is left where the client's first run put it, well short
-of the ceiling: view distance 7000 of 10000, three shadow cascades of four, a light range of
-2048 of 4096, a 16-bit float render format when a 32-bit one exists, and no multisampling.
+of the ceiling: view distance 7000 of 10000, three shadow cascades of four, a 16-bit float
+render format when a 32-bit one exists, and no multisampling.
 Extreme is Ultra, then each of these at the top of its own range:
 
 - **The picture:** 32-bit float render format, HDR output, 8x multisampling with CMAA2 at
   Ultra, 16x anisotropic filtering, full-resolution textures.
 - **Shadows and light:** the best shadow technique, four cascades, shadows on every creature
   out to the limit, ray traced shadows, Ultra ambient occlusion, the finest volumetric fog,
-  a light range of 4096.
+  and the light range at the client's limit of 2048.
 - **Distance and detail:** draw distance and horizon at 10000, terrain and building detail
   at 650, props at twice the usual range, creature detail at 30, nothing dropped for being
   small, grass out to 500, and ground clutter at a density of 256 out to 400 where the top

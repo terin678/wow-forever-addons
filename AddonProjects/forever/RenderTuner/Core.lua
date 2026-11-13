@@ -181,8 +181,8 @@ end
 ns.Refused = Refused
 
 -- What a preset's extras are judged by: the client's refusals, and the values it took but
--- did not keep (it caps a light distance of its own, and holds back multisampling until the
--- graphics restart). Those are noted when a preset is applied, and not held against it.
+-- did not keep (it holds back multisampling until the graphics restart, and keeps its last
+-- good value when handed one past a range). Those are noted when a preset is applied, and not held against it.
 function ns.Excused(cvar, value)
     local unkept = ns.db and ns.db.settings.unkept
     return Refused(cvar, value) or (unkept ~= nil and unkept[cvar] == value) or nil
