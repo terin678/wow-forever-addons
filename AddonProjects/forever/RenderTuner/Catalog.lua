@@ -15,6 +15,9 @@ the addon loads, so a row here is an offer, not a promise.
         kind    "slider", "toggle" or "choice"
         min, max, step      for a slider, in the variable's own numbers
         choices             for a choice: { { value, label }, ... }
+        text    for a variable that takes words: the words, in order. The knob's values are
+                then 0, 1, 2... for the first, second, third word, so that everything else
+                can go on treating a value as a number
         format  how a slider's value reads: "percent" (a fraction), "percent100", "fps",
                 "nits", "level" (a quality level, counted from 1 as the game shows it),
                 or nil for the number
@@ -35,7 +38,7 @@ the addon loads, so a row here is an offer, not a promise.
     }
 
 Left out on purpose: the raw RAID* copies of the variables beneath the raid levels,
-variables that take text (the graphics API, the adapter, the screenshot format), and the
+variables that take free text (the graphics API, the adapter, a screenshot size), and the
 engine's threading, streaming and debugging variables.
 
 The whole list was read again on build 70938 (1,801 variables, 185 in the client's Graphics
@@ -52,6 +55,17 @@ category). Also left out, each for a reason:
     what the game's own Combat and Accessibility pages own: the self-highlight, the
         silhouette, camera shake, violenceLevel
     what a level already sets: spellVisualDensityFilterSetting follows graphicsSpellDensity
+    what takes any number and does not say what it means: SkyCloudLOD, entityLodOffset,
+        disableHorizonStart. To be looked at in the game before they are offered
+
+Ranges that neither the help text nor the graphics page gives were asked of the client with
+/tuner probe ranges, on the same build. A variable the client checks keeps its last good
+value when handed a bad one, which is how the ends were found: ground clutter density 16 to
+256 and distance 40 to 400 (the levels stop at 48 and 320), the loading screen limit 10 to
+60, refraction 0 to 2, seven shading rates, three screenshot formats. The lighting level
+goes to 3, one past what the graphics page lists, and the particle level stops at 4.
+lodObjectSizeScale, wmoLodDistScale, bodyQuota and giQuality take any number: their ranges
+here are a choice, around the client's own value or the values its levels use.
 ]]
 
 local Catalog = {}
@@ -113,7 +127,8 @@ Catalog.FSR = 3
 -- multisampling, the render format) are left where the machine's first run put them, and
 -- the client defaults are well short of their ceilings: view distance 7000 of 10000,
 -- three shadow cascades of four, a light range of 2048 of 4096, and a 16-bit float render
--- format when 32-bit exists. `also` is that list, with the value each is given, and every
+-- format when 32-bit exists. The levels themselves stop short too: the top ground clutter
+-- level sets a density of 48 where the client takes 256. `also` is that list, with the value each is given, and every
 -- number in it is the top of the knob's own range below.
 --
 -- Not in it, on purpose: the render scale (the upscaling row owns it), and anything that
@@ -146,16 +161,22 @@ Catalog.LEVELS = {
           farclip = 10000, horizonClip = 10000, terrainLodDist = 650, wmoLodDist = 650,
           wmoDoodadDist = 2000, doodadLodScale = 200, entityLodDist = 30,
           lodObjectCullSize = 10, lodObjectCullDist = 100, lodObjectMinSize = 0, lodObjectFadeScale = 200,
-          groundEffectFade = 500,
+          groundEffectFade = 500, groundEffectDensity = 256, groundEffectDist = 400,
           -- Water, weather, particles and crowds.
           waterDetail = 3, pbrLiquidDetail = 2, rippleDetail = 2, reflectionMode = 3, reflectionDownscale = 0,
           weatherDensity = 3, particleDensity = 100, particleMTDensity = 100, unitClutter = 0,
           -- Nothing shaded down to save time, and everything that can move, moving.
-          vrsValar = 0, vrsValarAlwaysOn = 0, physicsLevel = 2,
+          vrsValar = 0, vrsValarAlwaysOn = 0, vrsWorldGeo = 0, vrsParticles = 0, animFrameSkipLOD = 0,
+          physicsLevel = 2,
       } },
 }
 
 local OFF_LOW_MED_HIGH_ULTRA = { { 0, "Off" }, { 1, "Low" }, { 2, "Medium" }, { 3, "High" }, { 4, "Ultra" } }
+
+-- The block sizes the two shading-rate variables take, as the client spells them.
+local SHADING_RATES = { "1x1", "1x2", "2x1", "2x2", "2x4", "4x2", "4x4" }
+local RATE_CHOICES = {}
+for i, rate in ipairs(SHADING_RATES) do RATE_CHOICES[i] = { i - 1, rate } end
 
 -- The quality levels, once for the world and once for raids.
 local LEVELS = {
@@ -165,7 +186,7 @@ local LEVELS = {
     { "ShadowQuality", "Shadow quality", 5, "From blob shadows to high-resolution soft shadows." },
     { "LiquidDetail", "Liquid detail", 3, "Water and lava quality." },
     { "PBRLiquidDetail", "Liquid shading", 2, "Physically based water quality." },
-    { "ParticleDensity", "Particle density", 5, "How many particles spells and effects use." },
+    { "ParticleDensity", "Particle density", 4, "How many particles spells and effects use." },
     { "SSAO", "Ambient occlusion", 4, "Contact shadows in corners and creases." },
     { "DepthEffects", "Depth effects", 3, "Effects that read scene depth, such as soft particles." },
     { "ComputeEffects", "Compute effects", 4, "Volumetric fog and other compute-shader effects." },
@@ -173,7 +194,8 @@ local LEVELS = {
     { "TextureResolution", "Texture resolution", 2, "World and character texture size." },
     { "SpellDensity", "Spell density", 2, "How many of other players' spell effects are drawn." },
     { "ProjectedTextures", "Projected textures", 1, "Ground effects projected onto terrain." },
-    { "LightMode", "Lighting quality", 2, "How many lights are drawn, and how well." },
+    -- The graphics page lists three; the client takes a fourth, and its top quality level sets it.
+    { "LightMode", "Lighting quality", 3, "How many lights are drawn, and how well." },
 }
 
 local function Level(prefix, group, row, raid)
@@ -237,6 +259,8 @@ Catalog.KNOBS = {
       help = "Turns the limit on for when the game is not the active window." },
     { cvar = "maxFPSBk", label = "Background limit", group = "frame", kind = "slider",
       min = 8, max = 200, step = 1, format = "fps", help = "The background limit." },
+    { cvar = "maxFPSLoading", label = "Loading screen limit", group = "frame", kind = "slider",
+      min = 10, max = 60, step = 5, format = "fps", help = "The frame rate limit while a loading screen is up." },
     { cvar = "useTargetFPS", label = "Use a target frame rate", group = "frame", kind = "toggle",
       help = "Lets the client lower detail by itself when the frame rate falls under the target." },
     { cvar = "targetFPS", label = "Target frame rate", group = "frame", kind = "slider",
@@ -291,7 +315,8 @@ Catalog.KNOBS = {
     { cvar = "shadowSoft", label = "Soft shadows", group = "shadow", kind = "toggle",
       help = "Blurs shadow edges." },
     { cvar = "shadowTextureSize", label = "Shadow resolution", group = "shadow", kind = "choice",
-      choices = { { 1024, "1024" }, { 2048, "2048" } }, help = "The size of the shadow maps." },
+      choices = { { 512, "512" }, { 768, "768" }, { 1024, "1024" }, { 1536, "1536" }, { 2048, "2048" } },
+      help = "The size of the shadow maps. These are the five the shadow quality level uses." },
     { cvar = "shadowNumCascades", label = "Shadow cascades", group = "shadow", kind = "slider",
       min = 1, max = 4, step = 1, help = "How many distance bands shadows are split into." },
     { cvar = "shadowBlendCascades", label = "Blend cascades", group = "shadow", kind = "toggle",
@@ -326,6 +351,8 @@ Catalog.KNOBS = {
       help = "Lets lights fall on glass, water and other see-through surfaces." },
     { cvar = "forceClusteredShading", label = "Light every transparent surface", group = "light", kind = "toggle",
       help = "Forces that lighting onto every see-through object, not only the ones the game picks." },
+    { cvar = "giQuality", label = "Lighting detail", group = "light", kind = "slider", min = 1, max = 4, step = 1,
+      help = "The variable beneath the Lighting quality level, which sets it from 1 to 4. The client does not say what each step adds." },
 
     -- Ambient occlusion tuning: the ASSAO shader's own controls, ranges from its help text.
     { cvar = "assaoRadius", label = "Radius", group = "ssao", kind = "slider", min = 0.1, max = 10, step = 0.05,
@@ -410,6 +437,21 @@ Catalog.KNOBS = {
       min = 50, max = 200, step = 5, help = "How far away objects fade out." },
     { cvar = "groundEffectFade", label = "Ground clutter fade", group = "world", kind = "slider",
       min = 30, max = 500, step = 10, help = "How far away grass fades out." },
+    { cvar = "groundEffectDensity", label = "Ground clutter density", group = "world", kind = "slider",
+      min = 16, max = 256, step = 16,
+      help = "How thickly grass and small ground detail are sown. The top ground clutter level sets 48." },
+    { cvar = "groundEffectDist", label = "Ground clutter distance", group = "world", kind = "slider",
+      min = 40, max = 400, step = 10,
+      help = "How far away grass is drawn. The top ground clutter level sets 320." },
+    { cvar = "TerrainLodDiv", label = "Terrain detail divisor", group = "world", kind = "choice",
+      choices = { { 384, "384" }, { 512, "512" }, { 768, "768" } },
+      help = "A divisor in how terrain loses detail with distance. The view distance level sets it: 384 at the low levels, 768 at the high ones." },
+    { cvar = "lodObjectSizeScale", label = "Object size for culling", group = "world", kind = "slider",
+      min = 0.5, max = 4, step = 0.1,
+      help = "Counts every object as this many times its size when deciding what is too small to draw. The client sets no limits on it; 1 is its own value." },
+    { cvar = "wmoLodDistScale", label = "Building detail scale", group = "world", kind = "slider",
+      min = 0.5, max = 4, step = 0.1,
+      help = "A multiplier on how far buildings keep their detail. The client sets no limits on it; 1 is its own value." },
     { cvar = "dynamicLod", label = "Dynamic detail", group = "world", kind = "toggle",
       help = "Lets the client adjust level of detail by itself as it goes." },
     { cvar = "animFrameSkipLOD", label = "Skip distant animation frames", group = "world", kind = "toggle",
@@ -426,6 +468,9 @@ Catalog.KNOBS = {
       min = 0, max = 3, step = 1, help = "What water reflects, from nothing to everything." },
     { cvar = "reflectionDownscale", label = "Reflection reduction", group = "water", kind = "slider",
       min = 0, max = 2, step = 1, help = "Halves the resolution of reflections for each step. 0 is full detail." },
+    { cvar = "refraction", label = "Refraction", group = "water", kind = "slider",
+      min = 0, max = 2, step = 1,
+      help = "Bending of what is seen through water and other clear surfaces. The depth effects level sets it." },
     { cvar = "weatherDensity", label = "Weather density", group = "water", kind = "slider",
       min = 0, max = 3, step = 1, help = "How heavy rain, snow and sandstorms are." },
 
@@ -452,6 +497,9 @@ Catalog.KNOBS = {
       help = "Thins crowds out only inside dungeons and raids." },
     { cvar = "unitClutterPlayerThreshold", label = "Crowd size", group = "particles", kind = "slider",
       min = 1, max = 40, step = 1, help = "How many players must be near before crowds are thinned out." },
+    { cvar = "bodyQuota", label = "Dressed characters", group = "particles", kind = "slider",
+      min = 25, max = 500, step = 25,
+      help = "The most characters drawn at once with their own gear and looks. The client sets no limits on it; 100 is its own value." },
 
     -- Effects and camera
     { cvar = "cameraFov", label = "Field of view", group = "effects", kind = "slider", min = 50, max = 90, step = 5,
@@ -474,6 +522,12 @@ Catalog.KNOBS = {
       help = "Shades flat parts of the picture at lower detail to save GPU time." },
     { cvar = "vrsValarAlwaysOn", label = "VRS always on", group = "effects", kind = "toggle", experimental = true,
       help = "Uses variable rate shading even when the GPU is not the limit." },
+    { cvar = "vrsWorldGeo", label = "World shading rate", group = "effects", kind = "choice", experimental = true,
+      text = SHADING_RATES, choices = RATE_CHOICES,
+      help = "Shades terrain, buildings and liquids in blocks of this many pixels: a render scale for them alone. 1x1 is full detail." },
+    { cvar = "vrsParticles", label = "Particle shading rate", group = "effects", kind = "choice", experimental = true,
+      text = SHADING_RATES, choices = RATE_CHOICES,
+      help = "The same for particles. The client uses it only when many are on screen." },
     { cvar = "physicsLevel", label = "Physics interaction", group = "effects", kind = "choice",
       choices = { { 0, "None" }, { 1, "Player only" }, { 2, "Player and NPCs" } }, restart = "client",
       help = "Which characters move cloth and foliage." },
@@ -501,4 +555,7 @@ Catalog.KNOBS = {
       help = "The size of the pointer, in pixels." },
     { cvar = "screenshotQuality", label = "Screenshot quality", group = "misc", kind = "slider",
       min = 1, max = 10, step = 1, help = "The quality of saved screenshots." },
+    { cvar = "screenshotFormat", label = "Screenshot format", group = "misc", kind = "choice",
+      text = { "jpeg", "png", "tga" }, choices = { { 0, "JPEG" }, { 1, "PNG" }, { 2, "TGA" } },
+      help = "The file type of saved screenshots. PNG and TGA lose nothing; JPEG is the smallest." },
 }

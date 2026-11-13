@@ -243,7 +243,7 @@ T.Case("Catalog: Extreme turns real knobs to the heavy end of their own range", 
     -- Where more is lighter: these run toward their minimum, or off, as they get heavier.
     local lighter = { lodObjectCullSize = true, lodObjectMinSize = true, reflectionDownscale = true,
         worldBaseMip = true, terrainMipLevel = true, componentTextureLevel = true, unitClutter = true,
-        vrsValar = true, vrsValarAlwaysOn = true }
+        vrsValar = true, vrsValarAlwaysOn = true, vrsWorldGeo = true, vrsParticles = true, animFrameSkipLOD = true }
     local count = 0
     for cvar, value in pairs(extreme.also) do
         count = count + 1
@@ -300,6 +300,24 @@ local CHOICE = { cvar = "C", label = "Pick", kind = "choice", choices = { { 0, "
 local LEVEL = { cvar = "L", label = "Level", kind = "slider", min = 0, max = 9, step = 1, rank = 2, format = "level" }
 local MASTER = { cvar = "M", label = "Master", kind = "slider", min = 0, max = 9, step = 1, rank = 1,
     restart = "client" }
+
+T.Case("Model: a variable that takes words is a number inside and a word at the client", function()
+    local FORMAT = { cvar = "screenshotFormat", kind = "choice", text = { "jpeg", "png", "tga" },
+        choices = { { 0, "JPEG" }, { 1, "PNG" }, { 2, "TGA" } } }
+    T.Eq(Model.Norm(FORMAT, "jpeg"), 0, "the first word is 0")
+    T.Eq(Model.Norm(FORMAT, "TGA"), 2, "whatever its case")
+    T.Eq(Model.Norm(FORMAT, "bmp"), nil, "a word that is not offered is not a value")
+    T.Eq(Model.Norm(FORMAT, 1), 1, "a number is already one")
+    T.Eq(Model.Format(FORMAT, 1), "PNG", "read by its label")
+    local plan = Model.Plan({ screenshotFormat = 1 }, { screenshotFormat = 0 }, { FORMAT })
+    T.Eq(plan[1].value, "png", "and set as the word")
+    for _, knob in ipairs(Catalog.KNOBS) do
+        if knob.text then
+            T.Eq(#knob.text, #knob.choices, knob.cvar .. " has a choice for each word")
+            for i, choice in ipairs(knob.choices) do T.Eq(choice[1], i - 1, knob.cvar .. " counts its words from 0") end
+        end
+    end
+end)
 
 T.Case("Model.Norm: the client's text becomes a number", function()
     T.Near(Model.Norm(SLIDER, "0.670000"), 0.67, "a decimal")
@@ -688,7 +706,7 @@ end)
 if IC_HEADLESS then
     local function WithClient(body)
         local cvars, sets = {}, {}
-        for _, knob in ipairs(Catalog.KNOBS) do cvars[knob.cvar] = "1" end
+        for _, knob in ipairs(Catalog.KNOBS) do cvars[knob.cvar] = knob.text and knob.text[2] or "1" end
         cvars.RenderScale, cvars.ResampleQuality, cvars.ResampleSharpness = "1", "2", "0.2"
         cvars.MSAAQuality = "3,0"
 
