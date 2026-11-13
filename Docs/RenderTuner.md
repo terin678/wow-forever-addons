@@ -1,7 +1,7 @@
 # RenderTuner
 
 The one place to tune WoW Forever's graphics: upscaling and quality presets, a live control
-for about 140 console variables, search, and a way back to what you had.
+for about 160 console variables, search, and a way back to what you had.
 
 **Version 0.6.0 has the floating panel and the commands**, an Extreme quality preset with
 the experimental extras, and a panel that can get out of the way of the world it tunes. It

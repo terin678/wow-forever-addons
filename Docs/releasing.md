@@ -23,6 +23,13 @@ If a release gets part of the way (GitHub done, a store refused), mend what was 
 
 Add `-f curseforge=false` or `-f wago=false` to leave out a store that already has the file.
 
+## The store pages
+
+The description on CurseForge and Wago is `Docs/store/RenderTuner.md`, kept here so it has a
+history. Neither store's upload API takes a description or screenshots, so both are pasted
+and uploaded by hand on each site when they change. Screenshots must be under 2 MB: crop to
+the panel and what is around it, which loses nothing, before reaching for compression.
+
 ## One-time setup (repo Settings, Secrets and variables, Actions)
 
 | Name | Kind | Where it comes from |
