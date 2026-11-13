@@ -3,7 +3,7 @@
 The one place to tune WoW Forever's graphics: upscaling and quality presets, a live control
 for about 140 console variables, search, and a way back to what you had.
 
-**Version 0.5.1 has the floating panel and the commands**, an Extreme quality preset with
+**Version 0.6.0 has the floating panel and the commands**, an Extreme quality preset with
 the experimental extras, and a panel that can get out of the way of the world it tunes. It
 says which quality level the game recommends for your machine, warns before Extreme when your
 frame rate is already low, and measures your frame rate and takes the step it suggests
@@ -19,6 +19,14 @@ bar under its button; the frame rate window closes on Escape.
 
 **New in 0.5.1:** the AddOns list shows RenderTuner on its own under a **Graphics** heading,
 not under Impulse Control and ICKit.
+
+**New in 0.6.0:** twenty-four more settings, after the client's whole list of console
+variables was read again. Among them: ground clutter density and distance, which go well
+past the top of the game's own slider; the screenshot format; a frame rate limit for loading
+screens; refraction; shading rates for the world and for particles; and character texture
+compression, highlights and glow. Extreme now takes ground clutter to the client's ceiling.
+Three ranges were wrong and are put right: Lighting quality has a fourth level, Particle
+density has five, not six, and Light distance stops at 2048, the most the client keeps.
 
 ## What the client can and cannot do
 
