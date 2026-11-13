@@ -1,10 +1,28 @@
 # Pushing a tag such as rendertuner-v0.4.0 tests RenderTuner, zips it with ICKit, and
 # publishes the zip to GitHub, CurseForge and Wago. Docs/releasing.md has the one-time setup.
+#
+# Run by hand (Actions, Run workflow, or gh workflow run) it publishes a tag that is already
+# there: for a release that got part of the way. The workflow is then read from the branch
+# it is run on and the addon from the tag, so a fault in the workflow can be mended on main
+# without moving the tag.
 name: Release RenderTuner
 
 on:
   push:
     tags: ["rendertuner-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag to publish, such as rendertuner-v0.6.0
+        required: true
+      curseforge:
+        description: Upload to CurseForge
+        type: boolean
+        default: true
+      wago:
+        description: Upload to Wago
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -19,12 +37,15 @@ jobs:
       CF_GAME_VERSION_IDS: ${{ vars.CF_GAME_VERSION_IDS }}
       CF_GAME_VERSION: ${{ vars.CF_GAME_VERSION }}
       WAGO_PROJECT_ID: ${{ vars.WAGO_PROJECT_ID }}
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: The tag, the TOC and the version agree
         run: |
-          version="${GITHUB_REF_NAME#rendertuner-v}"
+          version="${TAG#rendertuner-v}"
           toc=$(sed -n 's/^## Version:[[:space:]]*//p' AddonProjects/forever/RenderTuner/RenderTuner.toc | tr -d '\r')
           [ "$version" = "$toc" ] || { echo "tag says $version, RenderTuner.toc says $toc"; exit 1; }
           echo "VERSION=$version" >> "$GITHUB_ENV"
@@ -42,16 +63,19 @@ jobs:
           echo "ZIP=$zip" >> "$GITHUB_ENV"
           # The tag's message is the changelog; fetching again keeps an annotated tag's text.
           git fetch --tags --force --quiet
-          notes=$(git for-each-ref "refs/tags/$GITHUB_REF_NAME" --format='%(contents)')
+          notes=$(git for-each-ref "refs/tags/$TAG" --format='%(contents)')
           printf '%s\n' "${notes:-RenderTuner $VERSION}" > notes.md
 
       - name: GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "$ZIP" --title "RenderTuner $VERSION" --notes-file notes.md
+        # A release that is already there, from a run that got this far, is left as it is.
+        run: |
+          gh release view "$TAG" > /dev/null 2>&1 \
+            || gh release create "$TAG" "$ZIP" --title "RenderTuner $VERSION" --notes-file notes.md
 
       - name: CurseForge
-        if: ${{ env.CF_API_TOKEN != '' && env.CF_PROJECT_ID != '' }}
+        if: ${{ env.CF_API_TOKEN != '' && env.CF_PROJECT_ID != '' && (github.event_name == 'push' || inputs.curseforge) }}
         run: |
           # The game version is found by its name, 1.60.1, unless CF_GAME_VERSION_IDS says which ids.
           ids="$CF_GAME_VERSION_IDS"
@@ -66,13 +90,14 @@ jobs:
           fi
           meta=$(jq -n --rawfile c notes.md --arg n "RenderTuner $VERSION" --argjson g "[$ids]" \
             '{changelog: $c, changelogType: "markdown", displayName: $n, gameVersions: $g, releaseType: "release"}')
-          curl -fsS -H "X-Api-Token: $CF_API_TOKEN" -F "metadata=$meta" -F "file=@$ZIP" \
+          # --form-string, not -F: -F cuts a value at its first semicolon, and a changelog has them.
+          curl -fsS -H "X-Api-Token: $CF_API_TOKEN" --form-string "metadata=$meta" -F "file=@$ZIP" \
             "https://wow.curseforge.com/api/projects/$CF_PROJECT_ID/upload-file"
 
       - name: Wago
-        if: ${{ env.WAGO_API_TOKEN != '' && env.WAGO_PROJECT_ID != '' }}
+        if: ${{ env.WAGO_API_TOKEN != '' && env.WAGO_PROJECT_ID != '' && (github.event_name == 'push' || inputs.wago) }}
         run: |
           meta=$(jq -n --rawfile c notes.md --arg l "$VERSION" \
             '{label: $l, stability: "stable", changelog: $c, supported_forever_patch: "1.60.1"}')
           curl -fsS -H "Authorization: Bearer $WAGO_API_TOKEN" -H "Accept: application/json" \
-            -F "metadata=$meta" -F "file=@$ZIP" "https://addons.wago.io/api/projects/$WAGO_PROJECT_ID/version"
+            --form-string "metadata=$meta" -F "file=@$ZIP" "https://addons.wago.io/api/projects/$WAGO_PROJECT_ID/version"
