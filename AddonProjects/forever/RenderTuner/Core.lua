@@ -29,7 +29,7 @@ Nothing here runs while the game is idle: the addon acts on a command, a click o
 drag, and at login.
 ]]
 
-local VERSION = "0.5.1"
+local VERSION = "0.6.0"
 
 local Util = LibStub("LibICUtil-1.0")
 local Test = LibStub("LibICTest-1.0")
@@ -181,8 +181,8 @@ end
 ns.Refused = Refused
 
 -- What a preset's extras are judged by: the client's refusals, and the values it took but
--- did not keep (it caps a light distance of its own, and holds back multisampling until the
--- graphics restart). Those are noted when a preset is applied, and not held against it.
+-- did not keep (it holds back multisampling until the graphics restart, and keeps its last
+-- good value when handed one past a range). Those are noted when a preset is applied, and not held against it.
 function ns.Excused(cvar, value)
     local unkept = ns.db and ns.db.settings.unkept
     return Refused(cvar, value) or (unkept ~= nil and unkept[cvar] == value) or nil
@@ -219,8 +219,13 @@ function ns.ApplyLevel(preset)
     if preset.also then
         local wanted, left = ns.Model.AlsoWanted(preset, Refused)
         if not held then
-            local before = {}
-            for cvar in pairs(wanted) do before[cvar] = live[cvar] end
+            -- A note already there is from an Extreme not yet handed back: its list was
+            -- shorter in an earlier version, or one extra was moved by hand since. What it
+            -- holds is older than what is live, so it is kept and only added to.
+            local before = ns.db.settings.beforeExtras or {}
+            for cvar in pairs(wanted) do
+                if before[cvar] == nil then before[cvar] = live[cvar] end
+            end
             ns.db.settings.beforeExtras = before
         end
         ns.SetKnob(knob, preset.level)
@@ -268,6 +273,9 @@ function ns.ApplyLevel(preset)
             ns.db.settings.beforeExtras = nil
             ns.ApplyTarget(back, held.label .. " extras", true)
             line = line .. string.format("; and %s put back as they were", held.label)
+        else
+            -- The extras are the player's own by now, and so the note is of no more use.
+            ns.db.settings.beforeExtras = nil
         end
         ns.SetKnob(knob, preset.level)
     end
@@ -511,8 +519,14 @@ for word, action in pairs({ keep = "Keep", save = "Keep", undo = "Undo", revert 
     end
 end
 
-COMMANDS.probe = function()
+COMMANDS.probe = function(rest)
     if not ns.db then return end
+    if Console.Parse(rest) == "ranges" then
+        ns.db.ranges = ns.Probe.Ranges()
+        for _, line in ipairs(ns.Probe.RangeLines(ns.db.ranges)) do out.Print(line) end
+        out.Print("saved. /reload writes it to disk.")
+        return
+    end
     ns.db.probe = ns.Probe.Run()
     for _, line in ipairs(ns.Probe.Summary(ns.db.probe)) do out.Print(line) end
     out.Print("saved. /reload writes it to disk.")

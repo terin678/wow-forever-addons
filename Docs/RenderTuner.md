@@ -3,7 +3,7 @@
 The one place to tune WoW Forever's graphics: upscaling and quality presets, a live control
 for about 140 console variables, search, and a way back to what you had.
 
-**Version 0.5.1 has the floating panel and the commands**, an Extreme quality preset with
+**Version 0.6.0 has the floating panel and the commands**, an Extreme quality preset with
 the experimental extras, and a panel that can get out of the way of the world it tunes. It
 says which quality level the game recommends for your machine, warns before Extreme when your
 frame rate is already low, and measures your frame rate and takes the step it suggests
@@ -19,6 +19,14 @@ bar under its button; the frame rate window closes on Escape.
 
 **New in 0.5.1:** the AddOns list shows RenderTuner on its own under a **Graphics** heading,
 not under Impulse Control and ICKit.
+
+**New in 0.6.0:** twenty-four more settings, after the client's whole list of console
+variables was read again. Among them: ground clutter density and distance, which go well
+past the top of the game's own slider; the screenshot format; a frame rate limit for loading
+screens; refraction; shading rates for the world and for particles; and character texture
+compression, highlights and glow. Extreme now takes ground clutter to the client's ceiling.
+Three ranges were wrong and are put right: Lighting quality has a fourth level, Particle
+density has five, not six, and Light distance stops at 2048, the most the client keeps.
 
 ## What the client can and cannot do
 
@@ -54,6 +62,7 @@ beta features. The ones marked so far:
 | Render format | Changes the precision the whole picture is drawn at, and restarts the graphics engine |
 | Ray traced shadows | Needs a graphics card and driver that support ray tracing |
 | Variable rate shading, VRS always on | Needs hardware support, and changes how the picture is shaded |
+| World shading rate, Particle shading rate | The same hardware feature, applied to one kind of thing |
 
 The mark shows beside the setting's name in the panel, in its tooltip and in `/tuner list`.
 
@@ -191,21 +200,23 @@ graphics page does.
 
 **What Extreme means.** The game's ten levels move only the dozen or so variables its
 graphics page lists. Everything else is left where the client's first run put it, well short
-of the ceiling: view distance 7000 of 10000, three shadow cascades of four, a light range of
-2048 of 4096, a 16-bit float render format when a 32-bit one exists, and no multisampling.
+of the ceiling: view distance 7000 of 10000, three shadow cascades of four, a 16-bit float
+render format when a 32-bit one exists, and no multisampling.
 Extreme is Ultra, then each of these at the top of its own range:
 
 - **The picture:** 32-bit float render format, HDR output, 8x multisampling with CMAA2 at
   Ultra, 16x anisotropic filtering, full-resolution textures.
 - **Shadows and light:** the best shadow technique, four cascades, shadows on every creature
   out to the limit, ray traced shadows, Ultra ambient occlusion, the finest volumetric fog,
-  a light range of 4096.
+  and the light range at the client's limit of 2048.
 - **Distance and detail:** draw distance and horizon at 10000, terrain and building detail
   at 650, props at twice the usual range, creature detail at 30, nothing dropped for being
-  small, grass out to 500.
+  small, grass out to 500, and ground clutter at a density of 256 out to 400 where the top
+  level of the game's own slider stops at 48 and 320.
 - **Water, weather, particles:** every water, ripple and reflection setting at its best,
   reflections at full resolution, full particle density, crowds never thinned.
-- **Nothing shaded down:** variable rate shading off, and cloth and foliage moving on every
+- **Nothing shaded down:** variable rate shading off, the world and particle shading rates
+  at 1x1, no animation frames skipped at a distance, and cloth and foliage moving on every
   character.
 
 It leaves out what is taste rather than quality (bloom, field of view, the glow and other
@@ -302,26 +313,34 @@ will not let an addon set, is left out when the addon loads.
 | Group | `/tuner list` name | What is in it |
 | --- | --- | --- |
 | Upscaling | `upscale` | Render scale, resample filter, sharpening, dynamic render scale |
-| Anti-aliasing | `aa` | FXAA, CMAA, CMAA2 and its quality, multisampling |
-| Latency and frame rate | `frame` | Reflex and XeLL, vertical sync, triple buffering, frame rate limits and target |
+| Anti-aliasing | `aa` | FXAA, CMAA, CMAA2 with its quality and precision, multisampling |
+| Latency and frame rate | `frame` | Reflex and XeLL, vertical sync, triple buffering, frame rate limits and target, the loading screen limit |
 | Colour | `colour` | Gamma, brightness, contrast |
 | HDR | `hdr` | HDR output, brightness and peak overrides, HDR factor, render format |
 | Quality levels | `quality` | The overall level and the fifteen levels beneath it, from the game's own graphics page |
 | Shadows | `shadow` | Shadow technique, resolution, cascades and range, ray traced shadows |
-| Lighting and fog | `light` | Ambient occlusion, sun shafts, volumetric fog, bloom, specular, light distance |
-| Ambient occlusion tuning | `ssao` | The contact-shadow shader's own controls: radius, strength, contrast, blur, fade |
-| Textures | `texture` | Filtering, and resolution of world, terrain and character textures |
-| View distance and detail | `world` | Far clip, fog, and how far terrain, buildings, objects and creatures keep their detail |
-| Water and weather | `water` | Water detail and shading, ripples, reflections, weather density |
-| Particles and spells | `particles` | Particle density, spell clutter, projected textures, thinning out crowds |
-| Effects and camera | `effects` | Field of view, full-screen effects, outlines, variable rate shading, physics |
+| Lighting and fog | `light` | Ambient occlusion, sun shafts, volumetric fog, bloom, specular, light distance, lighting detail, lighting on transparent surfaces |
+| Ambient occlusion tuning | `ssao` | The contact-shadow shader's own controls: radius, strength, contrast, blur, fade, and how it blends its two sources of surface direction |
+| Textures | `texture` | Filtering, resolution of world, terrain and character textures, and character texture compression, highlights and glow |
+| View distance and detail | `world` | Far clip, fog, how far terrain, buildings, objects and creatures keep their detail, ground clutter density and distance, dynamic detail |
+| Water and weather | `water` | Water detail and shading, ripples, reflections, refraction, weather density |
+| Particles and spells | `particles` | Particle density, spell clutter, projected textures, thinning out crowds, how many dressed characters are drawn |
+| Effects and camera | `effects` | Field of view, full-screen effects, outlines, variable rate shading and the two shading rates, physics |
 | Raid profile | `raid` | A second set of quality levels the game uses inside raids, and the switch for it |
-| Cursor and screenshots | `misc` | Hardware cursor, cursor size, screenshot quality |
+| Cursor and screenshots | `misc` | Hardware cursor, cursor size, screenshot quality and format |
 
-Three things are left out on purpose: the raw variables beneath the raid levels (the raid
-levels themselves are there); variables that take text, such as the graphics API, the
-adapter and the screenshot format; and the engine's threading, streaming and debugging
-variables.
+Left out on purpose: the raw variables beneath the raid levels (the raid levels themselves
+are there); variables that take free text, such as the graphics API and the adapter; the
+engine's threading, streaming and debugging variables; the window and monitor settings; and
+what the game's own Combat and Accessibility pages own, such as camera shake and the
+self-highlight. The whole of the client's list was read again for 0.6.0, and the header of
+`Catalog.lua` says what stays out and why.
+
+Where the client checks a variable, the range is the client's: it was asked with
+`/tuner probe ranges`, which tries values and reads back what the client made of them. A few
+variables take any number at all (object size for culling, building detail scale, dressed
+characters, lighting detail); their sliders run over a modest span around the client's own
+value, and their tooltips say so.
 
 The ranges of the ambient occlusion tuning sliders come from the client's own help text.
 Ranges elsewhere that the client does not state, in HDR and in View distance and detail,

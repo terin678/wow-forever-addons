@@ -128,6 +128,43 @@ variables beneath it. Setting the overall `graphicsQuality` does not move the ot
 levels: the graphics page does that in Lua, asking
 `GetGraphicsCVarValueForQualityLevel(cvar, level, raid)` for each one.
 
+**What each level moves**, read with `/tuner probe ranges` on build 70938 by walking the raid
+copy of each level (a stored set: nothing on screen changes outside a raid) and watching the
+`RAID*` variables. Values are for the level's 0 upward.
+
+| Level (top) | Moves |
+|---|---|
+| ViewDistance (9) | `farclip` and `horizonClip` 3000 to 10000, `horizonStart` 400 to 4000, `terrainLodDist` 200 to 650, `TerrainLodDiv` 384, 512, 768, `wmoLodDist` 250 to 400, `entityLodDist` 5 to 10, `entityShadowFadeScale` 10 to 50 |
+| EnvironmentDetail (9) | `doodadLodScale` 50 to 150, `lodObjectCullSize` 35 down to 14, `lodObjectFadeScale` 50 to 150, `lodObjectMinSize` 0, then 30 and 20 at the top two |
+| GroundClutter (9) | `groundEffectDensity` 16, 32, 48, `groundEffectDist` 40 to 320 |
+| ShadowQuality (5) | `shadowMode` 2 to 4, `shadowNumCascades` 3 or 4, `shadowSoft`, `shadowTextureSize` 512, 768, 1024, 1536, 2048 |
+| LiquidDetail (3) | `waterDetail` 0 to 3, `reflectionMode` 0, 2, 2, 3, `rippleDetail` 0 to 2 |
+| DepthEffects (3) | `DepthBasedOpacity`, `refraction` 0 to 2, `sunShafts` 0 to 2 |
+| ComputeEffects (4) | `volumeFogLevel` 0 to 4 |
+| ParticleDensity (4) | `particleDensity` 10 to 100, `particleMTDensity` 20 to 100, `weatherDensity` 0 to 3 |
+| LightMode (3) | `giQuality` 1 to 4, and `RenderFormat`: 1 at the bottom level, 2 above it |
+| TextureResolution (2) | `worldBaseMip` 2 to 0, `terrainMipLevel` and `componentTextureLevel` 1 to 0 |
+| SpellDensity (2) | `spellClutter` 1, 2, 4 |
+| SSAO (4), OutlineMode (2), PBRLiquidDetail (2), ProjectedTextures (1) | the one variable of the same name |
+
+`graphicsLightMode` takes 3, one more than the three options the exported graphics page
+lists, and the client's own answer for quality level 10 is 3. `graphicsParticleDensity`
+stops at 4. A level handed a number past its top keeps its top.
+
+**A variable the client checks keeps its last good value when handed a bad one.**
+`C_CVar.SetCVar` does not raise and does not return false; reading the variable back is the
+only way to tell. Found this way: `groundEffectDensity` takes 16 to 256 and
+`groundEffectDist` 40 to 400 (both well past what the levels set), `maxFPSLoading` 10 to
+60, `refraction` 0 to 2, `vrsWorldGeo` and `vrsParticles` take `1x1`, `1x2`, `2x1`, `2x2`,
+`2x4`, `4x2`, `4x4`, and `screenshotFormat` takes `jpeg`, `jpg`, `png`, `tga`. Many
+variables are not checked at all and take any number, -1 included: `giQuality`,
+`SkyCloudLOD`, `bodyQuota`, `entityLodOffset`, `lodObjectSizeScale`, `wmoLodDistScale`,
+`disableHorizonStart`. For those the client gives no range.
+
+**The count moves between builds.** 1,807 variables with 186 in Graphics on the first
+reading; 1,801 with 185 on build 70938 (Nov 12 2026). `/tuner probe` saves the whole list to
+`RenderTunerDB.probe`; keep a copy before a patch to see what changed.
+
 **`DynamicRenderScale` has crashed this client.** Its own help text calls it a beta feature.
 
 `MinimalSliderTemplate`, `MinimalSliderWithSteppersTemplate` and the `OffScreenFrame` frame

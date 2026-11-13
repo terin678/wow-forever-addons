@@ -49,6 +49,14 @@ local EPSILON = 0.0001
 
 function Model.Norm(knob, raw)
     if raw == nil then return nil end
+    if knob.text and type(raw) ~= "number" then
+        -- A variable that takes words: the model's number is the word's place, from 0.
+        local word = tostring(raw):lower()
+        for i, text in ipairs(knob.text) do
+            if text == word then return i - 1 end
+        end
+        return nil
+    end
     local n = raw
     if type(n) ~= "number" then
         -- The leading number: "3,0" is multisampling level 3, coverage 0.
@@ -176,7 +184,8 @@ function Model.Plan(target, live, knobs)
     for index, knob in ipairs(knobs) do
         local want, have = target[knob.cvar], live[knob.cvar]
         if want ~= nil and have ~= nil and not Model.Same(want, have) then
-            plan[#plan + 1] = { cvar = knob.cvar, value = Model.Text(want), knob = knob, index = index }
+            local value = knob.text and knob.text[math.floor(want + 0.5) + 1] or Model.Text(want)
+            plan[#plan + 1] = { cvar = knob.cvar, value = value, knob = knob, index = index }
         end
     end
     table.sort(plan, function(a, b)
