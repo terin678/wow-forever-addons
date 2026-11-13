@@ -1207,9 +1207,17 @@ if IC_HEADLESS then
             button:GetScript("OnClick")(button)
             asked[#asked].yes()
             cvars.farclip = "8000"
+            -- Extreme again, from there: what the note holds is from before the first one,
+            -- and stays. The same serves a player whose Extreme is from a version with a
+            -- shorter list.
+            button:GetScript("OnClick")(button)
+            if #asked > 0 then asked[#asked].yes() end
+            T.Eq(ns.db.settings.beforeExtras.farclip, 7000, "the note keeps what was there before Extreme, not 8000")
+            cvars.farclip = "8000"
             local high = ns.Panel.Level("high")
             high:GetScript("OnClick")(high)
             T.Eq(cvars.MSAAQuality, "3", "tuned by hand, the extras stay")
+            T.Eq(ns.db.settings.beforeExtras, nil, "and the note, of no more use, is dropped")
         end)
     end)
 

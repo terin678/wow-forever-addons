@@ -219,8 +219,13 @@ function ns.ApplyLevel(preset)
     if preset.also then
         local wanted, left = ns.Model.AlsoWanted(preset, Refused)
         if not held then
-            local before = {}
-            for cvar in pairs(wanted) do before[cvar] = live[cvar] end
+            -- A note already there is from an Extreme not yet handed back: its list was
+            -- shorter in an earlier version, or one extra was moved by hand since. What it
+            -- holds is older than what is live, so it is kept and only added to.
+            local before = ns.db.settings.beforeExtras or {}
+            for cvar in pairs(wanted) do
+                if before[cvar] == nil then before[cvar] = live[cvar] end
+            end
             ns.db.settings.beforeExtras = before
         end
         ns.SetKnob(knob, preset.level)
@@ -268,6 +273,9 @@ function ns.ApplyLevel(preset)
             ns.db.settings.beforeExtras = nil
             ns.ApplyTarget(back, held.label .. " extras", true)
             line = line .. string.format("; and %s put back as they were", held.label)
+        else
+            -- The extras are the player's own by now, and so the note is of no more use.
+            ns.db.settings.beforeExtras = nil
         end
         ns.SetKnob(knob, preset.level)
     end
