@@ -14,6 +14,15 @@ the tag and `RenderTuner.toc` disagree, or if lint or a test fails.
    git push origin rendertuner-v0.4.1
    ```
 
+If a release gets part of the way (GitHub done, a store refused), mend what was wrong on
+`main` and publish the same tag again, without moving it:
+
+   ```bash
+   gh workflow run release-rendertuner.yml --ref main -f tag=rendertuner-v0.4.1
+   ```
+
+Add `-f curseforge=false` or `-f wago=false` to leave out a store that already has the file.
+
 ## One-time setup (repo Settings, Secrets and variables, Actions)
 
 | Name | Kind | Where it comes from |
