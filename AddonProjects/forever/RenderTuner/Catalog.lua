@@ -37,6 +37,21 @@ the addon loads, so a row here is an offer, not a promise.
 Left out on purpose: the raw RAID* copies of the variables beneath the raid levels,
 variables that take text (the graphics API, the adapter, the screenshot format), and the
 engine's threading, streaming and debugging variables.
+
+The whole list was read again on build 70938 (1,801 variables, 185 in the client's Graphics
+category). Also left out, each for a reason:
+
+    how the engine works, not how the picture looks: the gxMT*, *MaxJobs and component
+        loading limits, sceneOcclusionEnable, M2UseInstancing, GxPrismEnabled, the software
+        renderer, linear (the colour space, fixed at start)
+    loading and streaming: streaming*, worldPreload*, preload*Dist*, teleportMaxNoLoadDist
+    the window and the display: the monitor, resolution, notch and maximise variables
+    what cannot be set or read: the colour-blind variables (secure), maxLightCount
+    the camera's near plane (nearclip), which breaks depth when moved
+    the temporal ambient-occlusion offsets: this client has no temporal anti-aliasing
+    what the game's own Combat and Accessibility pages own: the self-highlight, the
+        silhouette, camera shake, violenceLevel
+    what a level already sets: spellVisualDensityFilterSetting follows graphicsSpellDensity
 ]]
 
 local Catalog = {}
@@ -195,6 +210,9 @@ Catalog.KNOBS = {
       help = "How hard CMAA2 works. Only matters when image anti-aliasing is CMAA2." },
     { cvar = "CMAA2ExtraSharpness", label = "CMAA2 extra sharpness", group = "aa", kind = "toggle",
       help = "Keeps text and fine shapes crisper, with less smoothing." },
+    { cvar = "CMAA2HalfFloat", label = "CMAA2 precision", group = "aa", kind = "choice",
+      choices = { { 0, "32-bit float" }, { 1, "16-bit float" } },
+      help = "The precision CMAA2 works at. 32-bit is the client's own choice." },
     { cvar = "MSAAQuality", label = "Multisample anti-aliasing", group = "aa", kind = "choice",
       choices = { { 0, "None" }, { 1, "2x" }, { 2, "4x" }, { 3, "8x" } }, restart = "gx",
       help = "Smooths the edges of geometry as it is drawn. Sharper than image anti-aliasing, and costs more." },
@@ -306,6 +324,8 @@ Catalog.KNOBS = {
       min = 256, max = 4096, step = 64, help = "The farthest a light is drawn from." },
     { cvar = "clusteredShading", label = "Lit transparent surfaces", group = "light", kind = "toggle",
       help = "Lets lights fall on glass, water and other see-through surfaces." },
+    { cvar = "forceClusteredShading", label = "Light every transparent surface", group = "light", kind = "toggle",
+      help = "Forces that lighting onto every see-through object, not only the ones the game picks." },
 
     -- Ambient occlusion tuning: the ASSAO shader's own controls, ranges from its help text.
     { cvar = "assaoRadius", label = "Radius", group = "ssao", kind = "slider", min = 0.1, max = 10, step = 0.05,
@@ -335,6 +355,12 @@ Catalog.KNOBS = {
       help = "Uses the direction surfaces face, for more accurate shading." },
     { cvar = "ssaoMagicNormals", label = "Blend normal sources", group = "ssao", kind = "toggle",
       help = "Mixes two sources of surface direction, as a compromise between buildings, foliage and characters." },
+    { cvar = "ssaoMagicThresholdLow", label = "Blend starts at", group = "ssao", kind = "slider",
+      min = 0, max = 90, step = 1,
+      help = "The angle between the two sources, in degrees, at which the blend begins. Needs Blend normal sources." },
+    { cvar = "ssaoMagicThresholdHigh", label = "Blend ends at", group = "ssao", kind = "slider",
+      min = 0, max = 90, step = 1,
+      help = "The angle, in degrees, at which the blend has gone over to the second source." },
 
     -- Textures
     { cvar = "textureFilteringMode", label = "Texture filtering", group = "texture", kind = "choice",
@@ -350,6 +376,12 @@ Catalog.KNOBS = {
       min = 0, max = 2, step = 1, help = "Halves character texture resolution for each step. 0 is full detail." },
     { cvar = "useHighResTextures", label = "Prefer upscaled textures", group = "texture", kind = "toggle",
       help = "Uses the higher-resolution versions of textures where the game has them." },
+    { cvar = "componentCompress", label = "Compress character textures", group = "texture", kind = "toggle",
+      help = "Stores the textures built for each character compressed. Off keeps them whole, at more video memory." },
+    { cvar = "componentSpecular", label = "Character highlights", group = "texture", kind = "toggle",
+      help = "Specular highlights on characters and what they wear." },
+    { cvar = "componentEmissive", label = "Character glow", group = "texture", kind = "toggle",
+      help = "The self-lit parts of character textures." },
 
     -- View distance and detail
     { cvar = "farclip", label = "Far clip", group = "world", kind = "slider", min = 500, max = 10000, step = 100,
@@ -378,6 +410,10 @@ Catalog.KNOBS = {
       min = 50, max = 200, step = 5, help = "How far away objects fade out." },
     { cvar = "groundEffectFade", label = "Ground clutter fade", group = "world", kind = "slider",
       min = 30, max = 500, step = 10, help = "How far away grass fades out." },
+    { cvar = "dynamicLod", label = "Dynamic detail", group = "world", kind = "toggle",
+      help = "Lets the client adjust level of detail by itself as it goes." },
+    { cvar = "animFrameSkipLOD", label = "Skip distant animation frames", group = "world", kind = "toggle",
+      help = "Animates far-away models at fewer frames to save time." },
 
     -- Water and weather
     { cvar = "waterDetail", label = "Water detail", group = "water", kind = "slider",
@@ -404,6 +440,8 @@ Catalog.KNOBS = {
       help = "The puffs of dust and snow kicked up by feet." },
     { cvar = "spellClutter", label = "Spell clutter", group = "particles", kind = "slider",
       min = 0, max = 4, step = 1, help = "How many of other players' spell effects are drawn." },
+    { cvar = "emphasizeMySpellEffects", label = "Emphasise my spells", group = "particles", kind = "toggle",
+      help = "Tones down the impacts of other players' spells so that yours stand out." },
     { cvar = "projectedTextures", label = "Projected textures", group = "particles", kind = "toggle",
       help = "Ground effects projected onto terrain." },
     { cvar = "DepthBasedOpacity", label = "Soft edges", group = "particles", kind = "toggle",
@@ -424,6 +462,10 @@ Catalog.KNOBS = {
       help = "The grey wash while dead." },
     { cvar = "ffxNether", label = "Nether effect", group = "effects", kind = "toggle",
       help = "The full-screen effect in the nether." },
+    { cvar = "ffxVenari", label = "Cloak of Ven'ari effect", group = "effects", kind = "toggle",
+      help = "The full-screen effect of the Cloak of Ven'ari." },
+    { cvar = "ffxLingeringVenari", label = "Lingering Ven'ari effect", group = "effects", kind = "toggle",
+      help = "The full-screen effect of the Lingering Cloak of Ven'ari." },
     { cvar = "OutlineEngineMode", label = "Outlines", group = "effects", kind = "choice",
       choices = { { 0, "Off" }, { 1, "Medium" }, { 2, "High" } }, help = "Outlines on selected and hovered units." },
     { cvar = "vrsValar", label = "Variable rate shading", group = "effects", kind = "choice",

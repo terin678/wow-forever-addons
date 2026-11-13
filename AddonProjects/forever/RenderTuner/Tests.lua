@@ -101,6 +101,63 @@ T.Case("Probe.CaptureLines: one line for each way tried, saying how far it got",
     T.Eq(#Probe.CaptureLines(nil), 0, "nothing tried, nothing said")
 end)
 
+-- A client that clamps: `floor` and `top` per variable, and a refusal of anything not a number.
+local function Clamping(cvars, limits)
+    local function get(name) return cvars[name] end
+    local function set(name, value)
+        if cvars[name] == nil then return false end
+        local n, limit = tonumber(value), limits[name]
+        if limit and not n then return false end
+        if limit then n = math.max(limit[1], math.min(limit[2], n)) end
+        cvars[name] = tostring(limit and n or value)
+        if limits.onSet then limits.onSet(name, cvars) end
+        return true
+    end
+    return get, set
+end
+
+T.Case("Probe.Ladder: what each value became, what was refused, and everything put back", function()
+    local cvars = { SkyCloudLOD = "0", vrsWorldGeo = "1x1" }
+    local get, set = Clamping(cvars, { SkyCloudLOD = { 0, 3 } })
+    local found = Probe.Ladder({ SkyCloudLOD = { -1, 2, 8, "junk" }, vrsWorldGeo = { "2x2" }, missing = { 1 } }, get, set)
+    local steps = found.SkyCloudLOD.steps
+    T.Eq(steps[1].read, "0", "under the floor is clamped up")
+    T.Eq(steps[2].read, "2", "inside the range is taken")
+    T.Eq(steps[3].read, "3", "over the top is clamped down")
+    T.True(steps[4].refused, "text is refused")
+    T.Eq(found.vrsWorldGeo.steps[1].read, "2x2", "a text variable takes text")
+    T.Eq(found.missing, nil, "a variable the client lacks is skipped")
+    T.Eq(cvars.SkyCloudLOD, "0", "put back")
+    T.Eq(cvars.vrsWorldGeo, "1x1", "put back")
+    T.Eq(found.SkyCloudLOD.left, nil, "nothing left changed")
+
+    local lines = table.concat(Probe.RangeLines({ ladder = found }), "\n")
+    T.True(lines:find("SkyCloudLOD: -1>0, 2, 8>3, junk refused", 1, true), "one line per variable: " .. lines)
+end)
+
+T.Case("Probe.Levels: which variables a level moves, one past its top, and all put back", function()
+    local cvars = { raidGraphicsLightMode = "1", RAIDgiQuality = "2", RAIDfarclip = "7000" }
+    local limits = { raidGraphicsLightMode = { 0, 3 } }
+    -- The level drives one variable: one more than itself.
+    limits.onSet = function(name, all)
+        if name == "raidGraphicsLightMode" then all.RAIDgiQuality = tostring(tonumber(all[name]) + 1) end
+    end
+    local get, set = Clamping(cvars, limits)
+    local found = Probe.Levels({ { cvar = "raidGraphicsLightMode", max = 2 }, { cvar = "raidGraphicsGone", max = 1 } },
+        { "RAIDfarclip", "RAIDgiQuality" }, get, set)
+    local row = found.raidGraphicsLightMode
+    T.Eq(table.concat(row.takes, " "), "0 1 2 3 3", "the level takes one more than the catalogue thought, and no more")
+    T.Eq(table.concat(row.drives.RAIDgiQuality, " "), "1 2 3 4 4", "what it drives, at each step")
+    T.Eq(row.drives.RAIDfarclip, nil, "what did not move is not listed")
+    T.Eq(found.raidGraphicsGone, nil, "a level the client lacks is skipped")
+    T.Eq(cvars.raidGraphicsLightMode, "1", "the level is put back")
+    T.Eq(cvars.RAIDgiQuality, "2", "and so is what it moved")
+
+    local lines = table.concat(Probe.RangeLines({ levels = found }), "\n")
+    T.True(lines:find("raidGraphicsLightMode reads 0 1 2 3 3", 1, true), "the level's own line")
+    T.True(lines:find("RAIDgiQuality: 1 2 3 4 4", 1, true), "and what it drives")
+end)
+
 --------------------------------------------------------------------------------
 -- Catalog
 --------------------------------------------------------------------------------
@@ -1037,7 +1094,7 @@ if IC_HEADLESS then
 
             -- A long group scrolls. The folded cluster open is the roomiest the view gets.
             ns.Panel.SetAdvanced(true)
-            ns.Panel.ShowGroup("world")
+            ns.Panel.ShowGroup("water")
             frame.scroll:ScrollTo(48)
             T.Eq(frame.scroll:GetOffset(), 0, "a group that fits does not scroll")
             ns.Panel.ShowGroup("quality")

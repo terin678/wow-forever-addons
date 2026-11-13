@@ -511,8 +511,14 @@ for word, action in pairs({ keep = "Keep", save = "Keep", undo = "Undo", revert 
     end
 end
 
-COMMANDS.probe = function()
+COMMANDS.probe = function(rest)
     if not ns.db then return end
+    if Console.Parse(rest) == "ranges" then
+        ns.db.ranges = ns.Probe.Ranges()
+        for _, line in ipairs(ns.Probe.RangeLines(ns.db.ranges)) do out.Print(line) end
+        out.Print("saved. /reload writes it to disk.")
+        return
+    end
     ns.db.probe = ns.Probe.Run()
     for _, line in ipairs(ns.Probe.Summary(ns.db.probe)) do out.Print(line) end
     out.Print("saved. /reload writes it to disk.")

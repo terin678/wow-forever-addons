@@ -20,6 +20,15 @@ read off disk after a /reload.
     Probe.Run()                     -> report    asks the client
     Probe.Capture(route, log, say)               asks the client, shows the picture
     Probe.CaptureView(mode), Probe.CaptureClear()
+
+A third question came with the second pass over the list: what range a variable takes, when
+neither its help text nor the game's graphics page says. /tuner probe ranges tries values
+and reads back what the client made of them, into RenderTunerDB.ranges.
+
+    Probe.Ladder(ladders, get, set) -> found     pure
+    Probe.Levels(levels, watch, get, set) -> found   pure
+    Probe.RangeLines(report)        -> lines     pure
+    Probe.Ranges()                  -> report    asks the client, and sets variables
 ]]
 
 local Util = LibStub("LibICUtil-1.0")
@@ -371,4 +380,144 @@ end
 
 function Probe.CaptureClear()
     if shot then shot:Hide() end
+end
+
+--------------------------------------------------------------------------------
+-- Asking: the ranges nothing else gives
+--------------------------------------------------------------------------------
+
+-- What to try on each variable whose range is not in its help text. Each is put back
+-- before a frame is drawn. The values are kept modest: the point is to see whether the
+-- client clamps or refuses, not to find out what a million does. Not here: TerrainLodDiv,
+-- a divisor, which the levels answer for.
+Probe.LADDERS = {
+    SkyCloudLOD = { -1, 0, 1, 2, 3, 4, 5, 8 },
+    lodObjectSizeScale = { -1, 0, 0.1, 0.5, 1, 2, 4, 10, 100 },
+    wmoLodDistScale = { -1, 0, 0.1, 0.5, 1, 2, 4, 10, 100 },
+    entityLodOffset = { -1, 0, 1, 5, 10, 20, 50, 100, 1000 },
+    bodyQuota = { -1, 0, 1, 50, 100, 200, 500, 1000, 10000 },
+    maxFPSLoading = { -1, 0, 1, 5, 10, 30, 60, 144, 1000 },
+    giQuality = { -1, 0, 1, 2, 3, 4, 5, 6, 8 },
+    refraction = { -1, 0, 1, 2, 3, 4, 5 },
+    groundEffectDensity = { -1, 0, 8, 16, 48, 64, 128, 256, 512, 1024 },
+    groundEffectDist = { -1, 0, 40, 70, 320, 400, 600, 1000, 5000 },
+    disableHorizonStart = { -1, 0, 1, 2 },
+    vrsWorldGeo = { "1x1", "1x2", "2x1", "2x2", "2x4", "4x2", "4x4", "8x8", "junk" },
+    vrsParticles = { "1x1", "1x2", "2x1", "2x2", "2x4", "4x2", "4x4", "8x8", "junk" },
+    screenshotFormat = { "jpeg", "jpg", "png", "tga", "bmp", "junk" },
+}
+
+-- Tries each value on each variable and notes what the variable read afterwards, then puts
+-- the variable back. `set` returns false when the client refuses. A variable the client
+-- does not have is skipped; one that did not go back says so in `left`.
+function Probe.Ladder(ladders, get, set)
+    local found = {}
+    for name, values in pairs(ladders or {}) do
+        local was = get(name)
+        if was ~= nil then
+            local steps = {}
+            for i, value in ipairs(values) do
+                local ok = set(name, value)
+                steps[i] = { tried = tostring(value), read = tostring(get(name)) }
+                if not ok then steps[i].refused = true end
+            end
+            set(name, was)
+            found[name] = { was = was, steps = steps }
+            if get(name) ~= was then found[name].left = tostring(get(name)) end
+        end
+    end
+    return found
+end
+
+-- Walks each raid quality level from 0 to two past its known top, and notes what the level
+-- itself read at each step and which of the `watch`ed variables moved, and to what. The
+-- raid levels are used because they are a stored copy: nothing on screen changes outside a
+-- raid. Everything is put back at the end. `levels` is { { cvar, max }, ... }.
+function Probe.Levels(levels, watch, get, set)
+    local before = {}
+    for _, name in ipairs(watch or {}) do before[name] = get(name) end
+
+    local found = {}
+    for _, level in ipairs(levels or {}) do
+        local was = get(level.cvar)
+        if was ~= nil then
+            local takes, seen = {}, {}
+            for value = 0, level.max + 2 do
+                set(level.cvar, value)
+                takes[#takes + 1] = tostring(get(level.cvar))
+                for _, name in ipairs(watch) do
+                    seen[name] = seen[name] or {}
+                    seen[name][#seen[name] + 1] = tostring(get(name))
+                end
+            end
+            local drives = {}
+            for name, values in pairs(seen) do
+                for i = 2, #values do
+                    if values[i] ~= values[1] then drives[name] = values; break end
+                end
+            end
+            set(level.cvar, was)
+            found[level.cvar] = { was = was, takes = takes, drives = drives }
+        end
+    end
+
+    for _, name in ipairs(watch or {}) do
+        if before[name] ~= nil and get(name) ~= before[name] then set(name, before[name]) end
+    end
+    return found
+end
+
+function Probe.RangeLines(report)
+    local lines = {}
+    for _, cvar in ipairs(Util.SortedKeys(report.levels or {})) do
+        local row = report.levels[cvar]
+        lines[#lines + 1] = string.format("  %s reads %s", cvar, table.concat(row.takes, " "))
+        for _, name in ipairs(Util.SortedKeys(row.drives)) do
+            lines[#lines + 1] = string.format("    %s: %s", name, table.concat(row.drives[name], " "))
+        end
+    end
+    for _, name in ipairs(Util.SortedKeys(report.ladder or {})) do
+        local row, parts = report.ladder[name], {}
+        for _, step in ipairs(row.steps) do
+            parts[#parts + 1] = step.tried .. (step.refused and " refused" or (step.read ~= step.tried and (">" .. step.read) or ""))
+        end
+        lines[#lines + 1] = string.format("  %s: %s%s", name, table.concat(parts, ", "),
+            row.left and (" |cffff4444left at " .. row.left .. ", was " .. tostring(row.was) .. "|r") or "")
+    end
+    return lines
+end
+
+function Probe.Ranges()
+    local function get(name) return C_CVar.GetCVar(name) end
+    local function set(name, value)
+        local ok, took = pcall(C_CVar.SetCVar, name, tostring(value))
+        return ok and took ~= false
+    end
+
+    local levels, known = {}, {}
+    for _, knob in ipairs(ns.Catalog.KNOBS) do
+        known[knob.cvar] = true
+        if knob.raid and knob.rank == 2 then levels[#levels + 1] = { cvar = knob.cvar, max = knob.max } end
+    end
+
+    -- The raid copies of the variables beneath the levels: every RAID* the catalogue does
+    -- not offer as a knob of its own.
+    local watch = {}
+    local list = Env.Resolve("ConsoleGetAllCommands") or Env.Resolve("C_Console.GetAllCommands")
+    local try = Env.Try("commands", list)
+    if try.ok and type(try.values[1]) == "table" then
+        for _, command in ipairs(try.values[1]) do
+            local name = command.command
+            if command.commandType == TYPE_CVAR and type(name) == "string" and name:find("^RAID") and not known[name] then
+                watch[#watch + 1] = name
+            end
+        end
+    end
+    table.sort(watch)
+
+    return {
+        at = time(), tuner = ns.VERSION, build = Env.Build(),
+        levels = Probe.Levels(levels, watch, get, set),
+        ladder = Probe.Ladder(Probe.LADDERS, get, set),
+    }
 end
