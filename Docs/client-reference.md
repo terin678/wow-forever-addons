@@ -265,5 +265,8 @@ v Impulse Control                      ## Category: Impulse Control
 > Loot
 ```
 
+An addon with a `## Category:` of its own and no `## Group:` sits alone under that heading:
+RenderTuner is `## Category: Graphics`, a heading nobody else on this client uses.
+
 One icon per row, because no title carries a texture. Members sort alphabetically inside a
 cluster; the head is drawn first whatever its name.
