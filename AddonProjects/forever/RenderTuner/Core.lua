@@ -29,7 +29,7 @@ Nothing here runs while the game is idle: the addon acts on a command, a click o
 drag, and at login.
 ]]
 
-local VERSION = "0.5.0"
+local VERSION = "0.5.1"
 
 local Util = LibStub("LibICUtil-1.0")
 local Test = LibStub("LibICTest-1.0")
