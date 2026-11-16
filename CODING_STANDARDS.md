@@ -26,12 +26,11 @@ AddonName/
   saved tables are touched, and the per-channel rules are one table.
 - `Bindings.xml` is loaded by the client by filename. Listing it in the `.toc` loads every
   binding twice; `scripts/lint.py` fails on it.
-- A guild addon carries `## Category: Impulse Control` and a `## Group:` naming the addon
-  that heads its area, or it sits alone in the AddOns list instead of under the guild
-  heading. A `## Group:` value has to be an addon that exists — a made-up name silently
-  ungroups everything using it. `Docs/client-reference.md` has the whole model. The
-  exception is an addon that is a tool for everyone, not a guild one: RenderTuner says
-  `## Category: Graphics` with no `## Group:`, so it stands alone under that heading.
+- An addon names its own heading in the AddOns list with `## Category:`, by what it is for
+  and not by who made it: RenderTuner says `Graphics`, Stickies `Notes`, Keel `Libraries`.
+  None of them uses `## Group:`, which nests an addon under another; its value has to be an
+  addon that exists, and a made-up name silently ungroups everything using it.
+  `Docs/client-reference.md` has the whole model.
 - Only the addon folder ships. No README, screenshots, or scripts inside it.
 - **No globals.** Every file starts with `local addonName, ns = ...` and hangs what it
   exports off `ns`, which the client gives each addon privately. A module claims its own

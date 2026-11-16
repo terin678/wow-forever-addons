@@ -1,0 +1,29 @@
+## Interface: 16001
+## Title: Keel
+## Notes: The shared libraries under RenderTuner and Stickies for WoW Forever: small ones, added one layer at a time.
+## Author: Malexis
+## Version: 0.14.0
+## IconTexture: Interface\Icons\INV_Misc_Gear_01
+## Category: Libraries
+## SavedVariables: KeelDB
+## SavedVariablesPerCharacter: KeelCharDB
+## X-Category: Library
+
+LibStub\LibStub.lua
+LibKeelUtil-1.0\LibKeelUtil-1.0.lua
+LibKeelTest-1.0\LibKeelTest-1.0.lua
+LibKeelJSON-1.0\LibKeelJSON-1.0.lua
+LibKeelEnv-1.0\LibKeelEnv-1.0.lua
+LibKeelRestrict-1.0\LibKeelRestrict-1.0.lua
+LibKeelGroup-1.0\LibKeelGroup-1.0.lua
+LibKeelChat-1.0\LibKeelChat-1.0.lua
+LibKeelComm-1.0\LibKeelComm-1.0.lua
+LibKeelStore-1.0\LibKeelStore-1.0.lua
+LibKeelConsole-1.0\LibKeelConsole-1.0.lua
+LibKeelTheme-1.0\LibKeelTheme-1.0.lua
+LibKeelWidgets-1.0\LibKeelWidgets-1.0.lua
+LibKeelSecure-1.0\LibKeelSecure-1.0.lua
+Core.lua
+Probe.lua
+Gallery.lua
+Tests.lua

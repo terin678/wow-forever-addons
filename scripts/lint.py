@@ -248,12 +248,12 @@ TOC_SAVED = re.compile(r"^##\s*SavedVariables(PerCharacter)?:", re.M)
 # ours to change; see SKILL.md.
 NOT_OURS = {"CutMaster"}
 
-# The library addons, one per code base: ICLibs under the Anniversary set, ICKit under
+# The library addons, one per code base: ICLibs under the Anniversary set, Keel under
 # the Forever one. Each records its libraries' MINORs in Docs/<name>.md.
-LIB_ADDONS = ("ICLibs", "ICKit")
+LIB_ADDONS = ("ICLibs", "Keel")
 
 # What boots an addon's saved variables: LibICCore's Attach, or the Forever store.
-CORE_LIBS = ("LibICCore-1.0", "LibICStore-1.0")
+CORE_LIBS = ("LibICCore-1.0", "LibKeelStore-1.0")
 
 
 def check_libs(flavor_dir, lib_addon="ICLibs"):

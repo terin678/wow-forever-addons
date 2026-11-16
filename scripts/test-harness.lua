@@ -301,7 +301,7 @@ end
 --------------------------------------------------------------------------------
 
 -- What the addon requires first, each from its own .toc, the way the client orders a
--- load: ICLibs for the Anniversary set (so LibStub, LibICCore and LibICUI exist), ICKit
+-- load: ICLibs for the Anniversary set (so LibStub, LibICCore and LibICUI exist), Keel
 -- for the Forever one. A dependency that is not a sibling folder (Auctionator, say) is
 -- somebody else's addon and is skipped. The third-party libraries inside load too; they
 -- are pure at file scope.

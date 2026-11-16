@@ -9,7 +9,7 @@
     # WoW Forever. The live client installs as _forever_ (the beta was _classic_beta_, which
     # still holds the exported interface source). This is the one line to change.
     forever = @{
-        Folder = "_forever_"; Interface = "16001"; Library = "ICKit"
-        Published = @("ICKit", "Stickies", "RenderTuner"); Template = ""
+        Folder = "_forever_"; Interface = "16001"; Library = "Keel"
+        Published = @("Keel", "Stickies", "RenderTuner"); Template = ""
     }
 }

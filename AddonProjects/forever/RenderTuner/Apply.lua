@@ -15,7 +15,7 @@ model; everything the model needs from the client comes through here.
     Apply.Restart(need)  restarts what a change needs, where an addon can
 ]]
 
-local Env = LibStub("LibICEnv-1.0")
+local Env = LibStub("LibKeelEnv-1.0")
 
 local Catalog = ns.Catalog
 local Model = ns.Model

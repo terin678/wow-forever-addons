@@ -29,13 +29,13 @@ Nothing here runs while the game is idle: the addon acts on a command, a click o
 drag, and at login.
 ]]
 
-local VERSION = "0.6.0"
+local VERSION = "0.6.1"
 
-local Util = LibStub("LibICUtil-1.0")
-local Test = LibStub("LibICTest-1.0")
-local Env = LibStub("LibICEnv-1.0")
-local Store = LibStub("LibICStore-1.0")
-local Console = LibStub("LibICConsole-1.0")
+local Util = LibStub("LibKeelUtil-1.0")
+local Test = LibStub("LibKeelTest-1.0")
+local Env = LibStub("LibKeelEnv-1.0")
+local Store = LibStub("LibKeelStore-1.0")
+local Console = LibStub("LibKeelConsole-1.0")
 
 local out = Console.New("RenderTuner", {
     debug = function() return ns.db ~= nil and ns.db.settings.debug == true end,
@@ -334,7 +334,7 @@ end
 -- hint are still there.
 function ns.AskRestart()
     if not ns.pendingEngine then return end
-    LibStub("LibICWidgets-1.0").Confirm(
+    LibStub("LibKeelWidgets-1.0").Confirm(
         "A change you made shows only after the graphics engine restarts.\n\nThe screen blinks. Restart it now?",
         ns.Restart)
 end

@@ -13,7 +13,7 @@ What the number means is decided in Model.Advise; this file reads the frame rate
 window, and hands the button's choice to the actions in Core.lua.
 ]]
 
-local W = LibStub("LibICWidgets-1.0")
+local W = LibStub("LibKeelWidgets-1.0")
 
 local Catalog = ns.Catalog
 local Model = ns.Model

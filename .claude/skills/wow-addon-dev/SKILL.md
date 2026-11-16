@@ -117,7 +117,7 @@ Four things, in order:
    | `/jam test` (JamminWithJam) | 17 |
    | `/ast test` (AuctionatorSellingTweaks) | 4 |
    | `/mfd test` (MarkedForDeath) | 438 |
-   | `/ickit test` (ICKit, the Forever kit) | 39 |
+   | `/keel test` (Keel, the Forever kit) | 39 |
    | `/sticky test` (Stickies, Forever) | 19 |
    | `/tuner test` (RenderTuner, Forever) | 24 |
 
@@ -149,13 +149,13 @@ fail loudly in chat over ones that fail silently.
 
 `AddonProjects/forever` targets WoW Forever (interface 16001, client folder
 `_forever_`; `scripts/flavors.psd1` holds the mapping). It is a separate code base
-built bottom-up on the library addon `ICKit`, not on ICLibs. Read
-`Docs/forever/VISION.md` first, then `Docs/ICKit.md` for what exists.
+built bottom-up on the library addon `Keel`, not on ICLibs. Read
+`Docs/forever/VISION.md` first, then `Docs/Keel.md` for what exists.
 
 - Everything above about branches, versions in three places, `.toc` restarts and lint
-  applies unchanged. ICKit's library MINORs are recorded in `Docs/ICKit.md`.
+  applies unchanged. Keel's library MINORs are recorded in `Docs/Keel.md`.
 - Do not port an Anniversary addon or copy LibICCore/LibICUI. Add the layer the work
-  needs to ICKit, with cases, then compose.
+  needs to Keel, with cases, then compose.
 - Modern first: prefer the client's current mechanism (Addon Compartment, `MenuUtil`,
   the Settings panel, `C_` namespaces) to a legacy one, and grep the exported source in
   `_classic_beta_\BlizzardInterfaceCode` for how the client does it.

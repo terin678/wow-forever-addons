@@ -21,7 +21,7 @@ will not load unless the player ticks "Load out of date AddOns".
 The flavor name to folder, interface and library mapping is `scripts/flavors.psd1`. The
 client installed as `_classic_beta_` while in beta and runs as `Wow.exe` from `_forever_`; `.build.info` lists it as
 `wow_classic_beta`. Everything below was confirmed on build 1.60.1 (70124) on 2026-09-30,
-either by `/ickit probe` running in the client (the report is saved to `ICKitDB.probe`) or
+either by `/keel probe` running in the client (the report is saved to `KeelDB.probe`) or
 by reading the exported interface source.
 
 **It is the modern client base.** `WOW_PROJECT_ID` is 1, the same value as

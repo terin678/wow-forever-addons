@@ -29,7 +29,7 @@ A few settings are marked **experimental** in the panel: dynamic render scale, H
 
 - **Commands:** `/tuner` opens the panel. `/tuner preset crisp`, `/tuner auto`, `/tuner undo`, `/tuner keep` and `/tuner revert` do what the buttons do. `/tuner help` lists the rest.
 - **Also opens from** the addon list beside the minimap (right-click it for the upscaling presets) and from a key you bind under Options, Keybindings, AddOns.
-- **ICKit is included.** The download has both folders, RenderTuner and ICKit. Keep them side by side in `Interface\AddOns`.
+- **Keel is included.** The download has both folders, RenderTuner and Keel. Keep them side by side in `Interface\AddOns`.
 - **In the AddOns list** it sits under a Graphics heading.
 - **Some changes need a restart.** Multisampling and HDR need the graphics engine restarted, which RenderTuner offers to do. One of Extreme's settings needs the game restarted, and it says so.
 

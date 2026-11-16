@@ -29,8 +29,8 @@ the layers it needs exist.
    exported interface source confirms it exists on this client. What is confirmed is
    written to [client-reference.md](../client-reference.md).
 6. **General audience.** Neutral names, no guild assumptions in behaviour, and every
-   surface is themeable. The default theme is the game's own look; the Impulse Control
-   theme ships beside it for guild members to switch to.
+   surface is themeable. The default theme is the game's own look; nothing that ships
+   carries anyone's name or mark.
 7. **Data from day one.** Account and character tables, a schema number and migrations
    exist in the first version of every addon, so the second version never has to guess
    what the first one saved.
@@ -43,26 +43,26 @@ the layers it needs exist.
 
 | Layer | Library | What it is | State |
 | --- | --- | --- | --- |
-| 0 | `LibICUtil-1.0` | Pure helpers: text, tables, lists | shipped in ICKit 0.1.0 |
-| 0 | `LibICTest-1.0` | The case runner, headless and in game | shipped in ICKit 0.1.0 |
-| 1 | `LibICEnv-1.0` | What this client offers: build, feature probe, CPU and memory | shipped in ICKit 0.2.0 |
-| 1 | `LibICStore-1.0` | Saved variables: defaults, schema, migrations, the load check | shipped in ICKit 0.2.0 |
-| 1 | `LibICConsole-1.0` | Printing and slash commands | shipped in ICKit 0.2.0 |
-| 1 | `LibICTheme-1.0` | The theme registry: colour and font roles, change listeners | shipped in ICKit 0.3.0 |
-| 2 | `LibICWidgets-1.0` | Themed frames: panel, label, button, check box, edit box, tooltip, menu, confirm | shipped in ICKit 0.3.0 |
+| 0 | `LibKeelUtil-1.0` | Pure helpers: text, tables, lists | shipped in Keel 0.1.0 |
+| 0 | `LibKeelTest-1.0` | The case runner, headless and in game | shipped in Keel 0.1.0 |
+| 1 | `LibKeelEnv-1.0` | What this client offers: build, feature probe, CPU and memory | shipped in Keel 0.2.0 |
+| 1 | `LibKeelStore-1.0` | Saved variables: defaults, schema, migrations, the load check | shipped in Keel 0.2.0 |
+| 1 | `LibKeelConsole-1.0` | Printing and slash commands | shipped in Keel 0.2.0 |
+| 1 | `LibKeelTheme-1.0` | The theme registry: colour and font roles, change listeners | shipped in Keel 0.3.0 |
+| 2 | `LibKeelWidgets-1.0` | Themed frames: panel, label, button, check box, edit box, tooltip, menu, confirm | shipped in Keel 0.3.0 |
 
-All of them live in one library addon, [ICKit](../ICKit.md). A library is added when an
+All of them live in one library addon, [Keel](../Keel.md). A library is added when an
 addon needs it and not before.
 
 ## Roadmap
 
-1. **Kit base.** The flavor in the repo, ICKit with layer 0, the headless harness and lint
-   knowing about it. *(done: ICKit 0.1.0)*
-2. **Layer 1 and the probe.** `/ickit probe` records what this client offers into the
-   kit's saved variables, and `/ickit profile` reports CPU and memory. The findings decide
-   how the widgets are drawn. *(done: ICKit 0.2.0; the findings are in [client-reference.md](../client-reference.md))*
+1. **Kit base.** The flavor in the repo, Keel with layer 0, the headless harness and lint
+   knowing about it. *(done: Keel 0.1.0)*
+2. **Layer 1 and the probe.** `/keel probe` records what this client offers into the
+   kit's saved variables, and `/keel profile` reports CPU and memory. The findings decide
+   how the widgets are drawn. *(done: Keel 0.2.0; the findings are in [client-reference.md](../client-reference.md))*
 3. **Themes and widgets.** The smallest set the first addon needs, with a gallery command.
-   *(built: ICKit 0.3.0)*
+   *(built: Keel 0.3.0)*
 4. **Stickies.** The first addon: small draggable notes that stay on screen, each a title
    and a checklist. A note belongs to one character or to the whole account.
    *(built: Stickies 0.1.0)*

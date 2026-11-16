@@ -984,7 +984,7 @@ if IC_HEADLESS then
             T.Near(sharp.control:GetValue(), 1.8, "a reversed knob shows from the other end")
             sharp.control.inner:GetScript("OnValueChanged")(sharp.control.inner, 1.5)
             T.Eq(cvars.ResampleSharpness, "0.5", "and sets the variable the right way round")
-            T.Eq(sharp.name.icTextRole, "accent", "a row that differs from saved is marked")
+            T.Eq(sharp.name.keelTextRole, "accent", "a row that differs from saved is marked")
 
             -- The render scale waits for the thumb to be let go.
             local scale = ns.Panel.Row("RenderScale")
@@ -1034,7 +1034,7 @@ if IC_HEADLESS then
             run("revert")
             T.Eq(cvars.ResampleSharpness, "0.2", "revert from the command line reaches the same settings")
             ns.Panel.ShowGroup("upscale")
-            T.Eq(ns.Panel.Row("ResampleSharpness").name.icTextRole, "text", "and the panel shows it")
+            T.Eq(ns.Panel.Row("ResampleSharpness").name.keelTextRole, "text", "and the panel shows it")
 
             run("")
             T.Eq(ns.Panel.IsShown(), false, "the bare command closes it again")
@@ -1053,13 +1053,13 @@ if IC_HEADLESS then
             T.Eq(cvars.graphicsViewDistance, "2", "with the levels beneath it")
             T.Eq(ns.cdb.panel.group, "quality", "and the quality levels come into view")
             T.Eq(cvars.RenderScale, "1", "upscaling is left alone")
-            T.Eq(ns.Panel.Level("high").icKind, "accent", "the preset in use is highlighted")
+            T.Eq(ns.Panel.Level("high").keelKind, "accent", "the preset in use is highlighted")
             T.Eq(frame.head:GetText(), "Quality levels", "the heading names the group")
 
             run("quality low")
             T.Eq(cvars.graphicsQuality, "0", "the command does the same")
-            T.Eq(ns.Panel.Level("low").icKind, "accent", "and the panel follows")
-            T.Eq(ns.Panel.Level("high").icKind, "normal", "the other is let go")
+            T.Eq(ns.Panel.Level("low").keelKind, "accent", "and the panel follows")
+            T.Eq(ns.Panel.Level("high").keelKind, "normal", "the other is let go")
 
             -- The raid master carries the raid levels, not the world's.
             ns.Panel.ShowGroup("raid")
@@ -1179,8 +1179,8 @@ if IC_HEADLESS then
             T.Eq(cvars.MSAAQuality, "3", "8x multisampling")
             T.Eq(cvars.shadowRt, "1", "ray traced shadows, which this machine cannot do, left alone")
             T.Eq(cvars.graphicsQuality, "9", "on top of level 10")
-            T.Eq(ns.Panel.Level("extreme").icKind, "accent", "Extreme is the one lit")
-            T.Eq(ns.Panel.Level("ultra").icKind, "normal", "and Ultra is not")
+            T.Eq(ns.Panel.Level("extreme").keelKind, "accent", "Extreme is the one lit")
+            T.Eq(ns.Panel.Level("ultra").keelKind, "normal", "and Ultra is not")
             T.Eq(#asked, 2, "then it asks to restart the graphics, for the multisampling and HDR")
             T.True(asked[2].text:find("restart", 1, true), "and says so")
             asked[2].yes()
@@ -1200,7 +1200,7 @@ if IC_HEADLESS then
             T.Eq(cvars.shadowNumCascades, "3", "and the cascades")
             T.Eq(cvars.MSAAQuality, "0", "and the multisampling")
             T.Eq(ns.db.settings.beforeExtras, nil, "the note of what they were is spent")
-            T.Eq(ns.Panel.Level("ultra").icKind, "accent", "Ultra is lit again")
+            T.Eq(ns.Panel.Level("ultra").keelKind, "accent", "Ultra is lit again")
 
             -- A player's own change to one of them means Extreme is no longer in force, so
             -- a lower level leaves the extras to the player.
@@ -1227,7 +1227,7 @@ if IC_HEADLESS then
             run("")
             T.Eq(ns.Panel.Preset("native").label:GetText(), "Native 100%", "native, on the right")
             T.Eq(ns.Panel.Preset("potato").label:GetText(), "Potato 33%", "potato, on the left")
-            T.Eq(ns.Panel.Preset("native").icKind, "accent", "the preset the scale is at is lit")
+            T.Eq(ns.Panel.Preset("native").keelKind, "accent", "the preset the scale is at is lit")
         end)
     end)
 
@@ -1314,7 +1314,7 @@ if IC_HEADLESS then
             ns.Panel.ShowGroup("shadow")
             local rt = ns.Panel.Row("shadowRt")
             T.Eq(rt.locked, "Needs ray tracing", "the row is locked, with the client's reason")
-            T.Eq(rt.name.icTextRole, "textDisabled", "and greyed out")
+            T.Eq(rt.name.keelTextRole, "textDisabled", "and greyed out")
             T.Eq(ns.Panel.Row("shadowSoft").locked, false, "a knob the client is not asked about is left alone")
             local before = #sets
             run("set shadowRt 2")

@@ -4,7 +4,7 @@ local addonName, ns = ...
 Stickies: sticky notes that stay on screen. Each is a title and a checklist; each belongs
 to this character or to every character on the account.
 
-It is the first addon built on ICKit, and it uses each layer for what that layer is for:
+It is the first addon built on Keel, and it uses each layer for what that layer is for:
 
     Notes.lua   the model: pure functions over the two saved tables     (LibICUtil)
     UI.lua      one small panel per note, drawn from what Notes says    (LibICWidgets, LibICTheme)
@@ -15,13 +15,13 @@ Nothing here runs while the game is idle: the addon acts on a click, a key, a co
 login, and the start of combat (to give the keyboard back).
 ]]
 
-local VERSION = "0.1.0"
+local VERSION = "0.1.1"
 
-local Util = LibStub("LibICUtil-1.0")
-local Test = LibStub("LibICTest-1.0")
-local Env = LibStub("LibICEnv-1.0")
-local Store = LibStub("LibICStore-1.0")
-local Console = LibStub("LibICConsole-1.0")
+local Util = LibStub("LibKeelUtil-1.0")
+local Test = LibStub("LibKeelTest-1.0")
+local Env = LibStub("LibKeelEnv-1.0")
+local Store = LibStub("LibKeelStore-1.0")
+local Console = LibStub("LibKeelConsole-1.0")
 
 local out = Console.New("Stickies", {
     debug = function() return ns.db ~= nil and ns.db.settings.debug == true end,
