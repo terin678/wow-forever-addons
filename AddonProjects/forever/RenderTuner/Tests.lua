@@ -266,6 +266,88 @@ T.Case("Catalog: Extreme turns real knobs to the heavy end of their own range", 
     T.True(count >= 40, "it reaches well beyond the two it began with")
 end)
 
+T.Case("Catalog: every pair of goggles sets real knobs, inside their own range", function()
+    local keys = {}
+    for _, mode in ipairs(Catalog.GOGGLES) do
+        T.Eq(keys[mode.key], nil, mode.key .. " is offered once")
+        keys[mode.key] = true
+        T.Eq(type(mode.label) == "string" and type(mode.note) == "string" and type(mode.icon) == "string", true,
+            mode.key .. " has a label, a note and an icon")
+        T.Eq(next(mode.set or {}) ~= nil or next(mode.shift or {}) ~= nil or next(mode.cap or {}) ~= nil, true, mode.key .. " changes something")
+        for cvar, value in pairs(mode.set or {}) do
+            local knob = Model.Find(Catalog.KNOBS, cvar)
+            T.Eq(knob ~= nil, true, cvar .. " is in the catalogue")
+            if knob then T.Eq(Model.Clamp(knob, value), value, cvar .. " is given a value it can hold") end
+        end
+        for cvar, by in pairs(mode.shift or {}) do
+            local knob = Model.Find(Catalog.KNOBS, cvar)
+            T.Eq(knob ~= nil and knob.kind == "slider", true, cvar .. " is a slider in the catalogue")
+            T.Eq((mode.set or {})[cvar], nil, cvar .. " is shifted or set, not both")
+            T.Eq(by ~= 0, true, cvar .. " moves")
+        end
+        for cvar, most in pairs(mode.cap or {}) do
+            local knob = Model.Find(Catalog.KNOBS, cvar)
+            T.Eq(knob ~= nil and knob.kind == "slider", true, cvar .. " is a slider in the catalogue")
+            if knob then T.Eq(Model.Clamp(knob, most), most, cvar .. " is capped at a value it can hold") end
+            T.Eq((mode.set or {})[cvar] == nil and (mode.shift or {})[cvar] == nil, true, cvar .. " is capped only")
+        end
+    end
+end)
+
+T.Case("Model.GogglesOn and GogglesOff: note what was, put back only what is still the pair's", function()
+    local knobs = {
+        { cvar = "A", kind = "slider", min = 0, max = 100, step = 1 },
+        { cvar = "S", kind = "slider", min = 0, max = 100, step = 1 },
+    }
+    local mode = { set = { A = 40, B = 0, Missing = 1 }, shift = { S = -10, Gone = 5 }, cap = { C = 1, D = 1 } }
+    local target, before = Model.GogglesOn(mode, { A = 50, B = 1, S = 35, C = 3, D = 0 }, knobs)
+    T.Eq(target.C, 1, "a cap brings a higher value down")
+    T.Eq(before.C, 3, "and notes it")
+    T.Eq(target.D, nil, "one already under the cap is not touched")
+    T.Eq(before.D, nil, "so there is nothing of it to put back")
+    T.Eq(target.A, 40, "what to set")
+    T.Eq(before.A, 50, "and what it was")
+    T.Eq(target.S, 25, "a shift moves from where the player had it")
+    T.Eq(before.S, 35, "and notes that")
+    T.Eq(target.Missing, nil, "a variable this client lacks is not set")
+    T.Eq(before.Gone, nil, "or noted")
+    T.Eq(Model.GogglesOn(mode, { S = 4 }, knobs).S, 0, "a shift stops at the end of the slider")
+
+    local back = Model.GogglesOff(target, before, { A = 40, B = 2, S = 25 })
+    T.Eq(back.A, 50, "a value still where the pair left it goes back")
+    T.Eq(back.S, 35, "a shifted one too")
+    T.Eq(back.B, nil, "one the player moved since is left alone")
+    back = Model.GogglesOff(nil, before, { A = 40, B = 2 })
+    T.Eq(back.B, 1, "a note with no record of what was set hands everything back")
+end)
+
+T.Case("Model.RingSpot: options spiral out of the icon and fan toward where it faces", function()
+    local x, y, scale, alpha = Model.RingSpot(1, 1, 1, 0)
+    T.Eq(math.floor(x + 0.5), 52, "one option at rest sits straight out the way the ring faces")
+    T.Eq(math.floor(y + 0.5), 0, "and not to either side")
+    T.Eq(scale, 1, "at full size")
+    T.Eq(alpha, 1, "and solid")
+
+    local x0, y0, scale0, alpha0 = Model.RingSpot(1, 1, 0, 0)
+    T.Eq(math.floor(math.sqrt(x0 * x0 + y0 * y0) + 0.5), 6, "it starts at the icon")
+    T.Eq(scale0, 0.5, "small")
+    T.Eq(alpha0, 0, "and unseen")
+    T.Eq(y0 > 0, true, "and round the side, so the way out is a curve")
+
+    local ux = Model.RingSpot(1, 1, 1, math.pi / 2)
+    T.Eq(math.floor(ux + 0.5), 0, "facing up, it goes up")
+
+    local _, ya = Model.RingSpot(1, 3, 1, 0)
+    local _, yb = Model.RingSpot(2, 3, 1, 0)
+    local _, yc = Model.RingSpot(3, 3, 1, 0)
+    T.Eq(math.floor(yb + 0.5), 0, "of three, the middle one is on the facing line")
+    T.Eq(ya > 0 and yc < 0 and math.floor(ya + yc + 0.5) == 0, true, "with one either side, evenly")
+
+    T.Eq(Model.RingProgress(1, 3, 0.25), Model.RingProgress(1, 1, 0.25), "the first option leaves at once")
+    T.Eq(Model.RingProgress(3, 3, 0.25), 0, "the last waits its turn")
+    T.Eq(Model.RingProgress(3, 3, 1), 1, "and all are out when the ring is open")
+end)
+
 T.Case("Catalog: every group is in a cluster, and the presets run from least to most", function()
     local clusters = {}
     for _, cluster in ipairs(Catalog.CLUSTERS) do clusters[cluster.key] = true end
@@ -683,6 +765,9 @@ T.Case("Model.Line, Status: lines of text", function()
     T.Eq(Model.Status("80%", nil, 3), "render scale 80%, 3 settings differ from the kept set.", "several")
     T.Eq(Model.Brief("67%", { label = "Crisp" }, 0), "Upscaling 67% Crisp", "short, for a title bar, and about the Upscaling row")
     T.Eq(Model.Brief("80%", nil, 2), "Upscaling 80%, 2 changed", "with what has changed")
+    T.Eq(Model.Brief("80%", nil, 2, "Snow goggles"), "Upscaling 80%, 2 changed, Snow goggles on", "and the goggles that explain it")
+    T.Eq(Model.Status("80%", nil, 0, "Snow goggles"), "render scale 80%, everything as kept. Snow goggles are on.",
+        "the longer line says so too")
     T.True(Model.RestartHint("gx"):find("/tuner restart", 1, true), "a restart hint names the command")
     T.Eq(Model.RestartHint(nil), nil, "no need, no hint")
 end)
@@ -765,6 +850,35 @@ if KEEL_HEADLESS then
         ns.pendingRestart, ns.pendingEngine = nil, nil
         if not ok then error(err, 0) end
     end
+
+    T.Case("Commands: goggles go on, come off, and leave alone what the player moved since", function()
+        WithClient(function(cvars, sets, run)
+            cvars.Brightness, cvars.weatherDensity = "50", "3"
+            ns.Baseline()
+            run("goggles snow")
+            T.Eq(cvars.Brightness, "40", "brightness comes down from where the player had it")
+            T.Eq(cvars.bloomEnable, "0", "and the fixed values are set")
+            T.Eq(ns.Goggles(), Catalog.GOGGLES[1], "and it is the pair that is on")
+            T.Eq(ns.db.settings.goggles.before.Brightness, 50, "with what each was noted in the saved table")
+            run("set weatherDensity 2")
+            run("goggles snow")
+            T.Eq(ns.Goggles(), nil, "the same name again takes it off")
+            T.Eq(cvars.Brightness, "50", "what it changed goes back")
+            T.Eq(cvars.weatherDensity, "2", "what the player moved meanwhile stays theirs")
+            T.Eq(ns.db.settings.goggles, nil, "and the note is gone")
+            run("goggles snow")
+            run("keep")
+            T.Eq(ns.db.saved.Brightness, 50, "Keep records the settings without the goggles")
+            T.Eq(cvars.Brightness, "40", "and leaves them on")
+            T.Eq(ns.Goggles(), Catalog.GOGGLES[1], "as the pair they were")
+            run("goggles off")
+            T.Eq(cvars.Brightness, "50", "off takes off whatever is on")
+            cvars.weatherDensity = "0"
+            run("goggles snow")
+            T.Eq(cvars.weatherDensity, "0", "snowfall already lighter than the cap is left alone")
+            run("goggles off")
+        end)
+    end)
 
     T.Case("Commands: presets, set, save, revert and restore against a made-up client", function()
         WithClient(function(cvars, sets, run)

@@ -170,6 +170,22 @@ Catalog.LEVELS = {
       } },
 }
 
+-- Goggles: a few settings put on together for a while and taken off again, for when the
+-- world itself is hard to look at. Each is one row: `set` is the variables given a fixed
+-- value, `shift` the sliders moved by an amount from wherever the player has them
+-- (brightness is a matter of the player's own screen, so it is never set outright), and
+-- `cap` the sliders brought down to a value and left alone when already at or under it.
+-- Every one has to be a knob below. What each was before is noted when
+-- a pair goes on and put back when it comes off, so another pair is another row here and
+-- nothing else. `icon` is what the icon on the screen shows while the pair is on.
+Catalog.GOGGLES = {
+    { key = "snow", label = "Snow goggles", icon = "Interface\\Icons\\INV_Gizmo_NewGoggles",
+      note = "for a blizzard or a white-out: a darker picture, no glow, lighter snowfall",
+      shift = { Brightness = -10, Contrast = 5 },
+      cap = { weatherDensity = 1 },
+      set = { bloomEnable = 0, ffxGlow = 0 } },
+}
+
 local OFF_LOW_MED_HIGH_ULTRA = { { 0, "Off" }, { 1, "Low" }, { 2, "Medium" }, { 3, "High" }, { 4, "Ultra" } }
 
 -- The block sizes the two shading-rate variables take, as the client spells them.

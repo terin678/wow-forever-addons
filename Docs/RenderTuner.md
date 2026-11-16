@@ -33,6 +33,10 @@ Nothing in RenderTuner itself changes. The download carries the `Keel` folder; t
 `ICKit` folder can be deleted. If you had picked a theme with `/ickit theme`, pick it again
 with `/keel theme`, where the Impulse Control theme is now called Navy.
 
+**New in 0.7.0:** **goggles**, and an **icon on the screen** to put them on with. Snow
+goggles are the first pair: one click for a blizzard, one click to put everything back. See
+[Goggles](#goggles).
+
 ## What the client can and cannot do
 
 The Forever client (1.60.1) has **no DLSS, DLAA, XeSS, or FSR 2 and later**. The client
@@ -234,6 +238,32 @@ ray tracing, is left alone and named. Before it changes anything it notes what e
 was; choosing a lower level puts them back as they were, exactly. If you tune one of them
 by hand after Extreme, the button no longer lights, and a lower level leaves them to you.
 
+## Goggles
+
+A pair of goggles is a few settings changed together for a while, for when the world itself
+is hard to look at, and put back as they were when you take the pair off.
+
+| Pair | For | What it sets |
+| --- | --- | --- |
+| Snow goggles | A blizzard or a white-out | Brightness 10 lower and Contrast 5 higher than you have them, Bloom off, Full-screen glow off, Weather density down to 1 if it was higher |
+
+Three ways to put a pair on or take it off:
+
+- **The icon on the screen.** A small square at the left edge of the screen. Click it and the
+  goggles spiral out around it; click a pair to put it on or take it off (the one that is
+  on glows). The ring stays open until you click the icon again. Right-click it for a menu, and drag
+  it wherever you like. While a pair is on it shows a pair of goggles
+  instead of the spyglass. `/tuner hud` hides it or brings it back. Its place is kept per
+  character.
+- **Right-click RenderTuner in the Addon Compartment**, under the upscaling presets.
+- **`/tuner goggles snow`**; the same again, or `/tuner goggles off`, takes them off.
+
+What each setting was is noted when the pair goes on, and that is what comes back, after a
+reload or a restart too. A setting you move yourself while the pair is on is yours: taking
+the pair off leaves it where you put it. While a pair is on the panel says so beside the upscaling line, and counts the pair's
+settings as changed from kept. **Keep** with goggles on records your settings without
+them, and leaves them on.
+
 ## The frame rate check
 
 RenderTuner measures your frame rate for about six seconds (twelve readings, the middle one
@@ -287,6 +317,9 @@ many settings differ from the kept set.
 | `/tuner preset [name]` | Lists the presets, or uses one |
 | `/tuner on`, `/tuner off` | Upscale with the last preset used, or go back to native |
 | `/tuner quality [name]` | Lists the overall quality presets, or uses one |
+| `/tuner goggles [name]` | Lists the goggles, or puts a pair on (or takes it off, if it is on) |
+| `/tuner goggles off` | Takes off whatever pair is on |
+| `/tuner hud` | Shows or hides the icon on the screen |
 | `/tuner list` | The groups, with how many settings each has and how many have changed |
 | `/tuner list <group>` | Every setting in a group with its value, and the kept value where it differs |
 | `/tuner list changed` | Only the settings that differ from kept |

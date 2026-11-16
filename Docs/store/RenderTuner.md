@@ -33,10 +33,10 @@ A few settings are marked **experimental** in the panel: dynamic render scale, H
 - **In the AddOns list** it sits under a Graphics heading.
 - **Some changes need a restart.** Multisampling and HDR need the graphics engine restarted, which RenderTuner offers to do. One of Extreme's settings needs the game restarted, and it says so.
 
-## New in 0.6.1
+## New in 0.7.0
 
-- The shared library that ships inside RenderTuner is now called Keel. It was ICKit. Once you have updated, the old `ICKit` folder in `AddOns` can be deleted.
-- RenderTuner sits under Graphics in the AddOns list, and Keel under Libraries.
-- If you had picked a theme with `/ickit theme`, pick it again with `/keel theme`. The Impulse Control theme is now called Navy.
+- Goggles: a few settings changed together for a while and put back with one click. Snow goggles are the first pair, for a blizzard or a white-out: a slightly darker picture, no bloom or glow, lighter snowfall.
+- An icon on the screen. Click it and the goggles spiral out around it; click a pair to put it on or take it off, and click the icon again to put them away. Drag it anywhere; `/tuner hud` hides it.
+- Also in the Addon Compartment's right-click menu, and as `/tuner goggles`.
 
 Made by Malexis. Source and full documentation: https://github.com/terin678/wow-forever-addons

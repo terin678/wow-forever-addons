@@ -860,7 +860,8 @@ function Panel.Refresh()
     end
 
     local scale = Model.Find(knobs, "RenderScale")
-    frame.status:SetText(flashText or Model.Brief(scale and Model.Format(scale, live.RenderScale) or "?", preset, changed))
+    frame.status:SetText(flashText or Model.Brief(scale and Model.Format(scale, live.RenderScale) or "?", preset, changed,
+        ns.Goggles() and ns.Goggles().label))
     -- Gold fill is for the level and preset in use; what is waiting to be kept is said in words.
     frame.keep:SetLabel(changed > 0 and string.format("Keep (%d)", changed) or "Keep")
     frame.restart:SetShown(ns.pendingEngine ~= nil)

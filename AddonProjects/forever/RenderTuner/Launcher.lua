@@ -3,7 +3,7 @@ local addonName, ns = ...
 --[[
 The way in from the minimap: an entry in the Addon Compartment, the client's own list of
 addons beside the minimap. Left-click opens or closes the panel; right-click is the
-presets, for changing the render scale without opening anything.
+presets and the goggles, for changing either without opening anything.
 ]]
 
 local W = LibStub("LibKeelWidgets-1.0")
@@ -19,7 +19,7 @@ local function Tip(tip)
     tip:AddLine("RenderTuner")
     if ns.db and ns.db.saved then tip:AddLine(ns.StatusText(), 1, 1, 1, true) end
     tip:AddLine("Left-click to open the panel", 0.7, 0.7, 0.7)
-    tip:AddLine("Right-click for the upscaling presets", 0.7, 0.7, 0.7)
+    tip:AddLine("Right-click for the upscaling presets and the goggles", 0.7, 0.7, 0.7)
 end
 
 local function PresetMenu()
@@ -33,6 +33,7 @@ local function PresetMenu()
             onClick = function() ns.ApplyPreset(preset) end,
         }
     end
+    for _, item in ipairs(ns.Hud.GogglesItems()) do items[#items + 1] = item end
     W.Menu(UIParent, items)
 end
 
