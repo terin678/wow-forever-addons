@@ -24,6 +24,7 @@ ns.Hud = Hud
 
 local SIZE = 36            -- pixels, at the interface's own scale
 local OPTION = 32          -- an option in the ring
+local SLOP = 6             -- screen pixels the pointer may move and still have clicked
 local OPEN, CLOSE = 0.45, 0.28    -- seconds for the ring to open and to close
 local DEFAULT_X, DEFAULT_Y = 0.02, 0.45    -- fractions of the screen: the left edge, halfway down
 
@@ -148,14 +149,15 @@ function Hud.Create()
     frame.icon:SetPoint("BOTTOMRIGHT", -2, 2)
     frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     -- The panel's own scripts do the dragging. These run after them and tell a click from
-    -- a drag by whether the icon ended up where it started.
-    frame:HookScript("OnMouseDown", function(self) downX, downY = W.GetPlace(self) end)
+    -- a drag by how far the pointer went. Not by where the icon ended up: a hand moves a
+    -- pixel or two in a click, and letting go re-seats the icon, either of which shifts it.
+    frame:HookScript("OnMouseDown", function() downX, downY = GetCursorPosition() end)
     frame:HookScript("OnMouseUp", function(self, button)
         if button == "RightButton" then
             Menu()
         elseif button == "LeftButton" then
-            local x, y = W.GetPlace(self)
-            if x == downX and y == downY then SetOpen(ring.dir < 0) end
+            local x, y = GetCursorPosition()
+            if downX and math.abs(x - downX) <= SLOP and math.abs(y - downY) <= SLOP then SetOpen(ring.dir < 0) end
         end
     end)
     -- Hidden with the ring open: shut at once, so it is not found half open when shown.
