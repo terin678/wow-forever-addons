@@ -266,6 +266,37 @@ T.Case("Catalog: Extreme turns real knobs to the heavy end of their own range", 
     T.True(count >= 40, "it reaches well beyond the two it began with")
 end)
 
+T.Case("Catalog: every pair of goggles sets real knobs, inside their own range", function()
+    local keys = {}
+    for _, mode in ipairs(Catalog.GOGGLES) do
+        T.Eq(keys[mode.key], nil, mode.key .. " is offered once")
+        keys[mode.key] = true
+        T.Eq(type(mode.label) == "string" and type(mode.note) == "string" and type(mode.icon) == "string", true,
+            mode.key .. " has a label, a note and an icon")
+        T.Eq(next(mode.set) ~= nil, true, mode.key .. " sets something")
+        for cvar, value in pairs(mode.set) do
+            local knob = Model.Find(Catalog.KNOBS, cvar)
+            T.Eq(knob ~= nil, true, cvar .. " is in the catalogue")
+            if knob then T.Eq(Model.Clamp(knob, value), value, cvar .. " is given a value it can hold") end
+        end
+    end
+end)
+
+T.Case("Model.GogglesOn and GogglesOff: note what was, put back only what is still the pair's", function()
+    local mode = { set = { A = 40, B = 0, Missing = 1 } }
+    local target, before = Model.GogglesOn(mode, { A = 50, B = 1 })
+    T.Eq(target.A, 40, "what to set")
+    T.Eq(before.A, 50, "and what it was")
+    T.Eq(target.Missing, nil, "a variable this client lacks is not set")
+    T.Eq(before.Missing, nil, "or noted")
+
+    local back = Model.GogglesOff(mode, before, { A = 40, B = 2 })
+    T.Eq(back.A, 50, "a value still where the pair left it goes back")
+    T.Eq(back.B, nil, "one the player moved since is left alone")
+    back = Model.GogglesOff(nil, before, { A = 40, B = 2 })
+    T.Eq(back.B, 1, "a pair no longer in the catalogue hands everything back")
+end)
+
 T.Case("Catalog: every group is in a cluster, and the presets run from least to most", function()
     local clusters = {}
     for _, cluster in ipairs(Catalog.CLUSTERS) do clusters[cluster.key] = true end
@@ -765,6 +796,26 @@ if KEEL_HEADLESS then
         ns.pendingRestart, ns.pendingEngine = nil, nil
         if not ok then error(err, 0) end
     end
+
+    T.Case("Commands: goggles go on, come off, and leave alone what the player moved since", function()
+        WithClient(function(cvars, sets, run)
+            cvars.Brightness, cvars.weatherDensity = "50", "3"
+            ns.Baseline()
+            run("goggles snow")
+            T.Eq(cvars.Brightness, "40", "the pair's values are set")
+            T.Eq(ns.Goggles(), Catalog.GOGGLES[1], "and it is the pair that is on")
+            T.Eq(ns.db.settings.goggles.before.Brightness, 50, "with what each was noted in the saved table")
+            run("set weatherDensity 2")
+            run("goggles snow")
+            T.Eq(ns.Goggles(), nil, "the same name again takes it off")
+            T.Eq(cvars.Brightness, "50", "what it changed goes back")
+            T.Eq(cvars.weatherDensity, "2", "what the player moved meanwhile stays theirs")
+            T.Eq(ns.db.settings.goggles, nil, "and the note is gone")
+            run("goggles snow")
+            run("goggles off")
+            T.Eq(cvars.Brightness, "50", "off takes off whatever is on")
+        end)
+    end)
 
     T.Case("Commands: presets, set, save, revert and restore against a made-up client", function()
         WithClient(function(cvars, sets, run)

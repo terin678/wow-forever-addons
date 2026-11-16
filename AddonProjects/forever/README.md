@@ -7,7 +7,7 @@ Target interface: 16001 (product `wow_classic_beta`, version 1.60.1). Client fol
 | --- | --- | --- |
 | Keel | 0.14.0 | [Docs/Keel.md](../../Docs/Keel.md) |
 | Stickies | 0.1.1 | [Docs/Stickies.md](../../Docs/Stickies.md) |
-| RenderTuner | 0.6.1 | [Docs/RenderTuner.md](../../Docs/RenderTuner.md) |
+| RenderTuner | 0.7.0 | [Docs/RenderTuner.md](../../Docs/RenderTuner.md) |
 
 `Keel` is the library addon for this flavor. Addons here list it under `## Dependencies`,
 so it must be installed alongside them; `scripts/package.ps1` bundles it into their zips

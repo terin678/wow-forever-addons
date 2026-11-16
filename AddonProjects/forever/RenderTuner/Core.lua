@@ -29,7 +29,7 @@ Nothing here runs while the game is idle: the addon acts on a command, a click o
 drag, and at login.
 ]]
 
-local VERSION = "0.6.1"
+local VERSION = "0.7.0"
 
 local Util = LibStub("LibKeelUtil-1.0")
 local Test = LibStub("LibKeelTest-1.0")
@@ -75,7 +75,8 @@ Store.Register(addonName, {
     -- Where the panel sits, and the group it was last showing.
     -- compact: only the title bar, the two preset rows and the actions are shown.
     -- advanced: the Advanced cluster of groups is unfolded.
-    charDefaults = { panel = { group = "upscale", compact = false, advanced = false } },
+    -- hud: the icon on the screen, and where it sits once it has been dragged.
+    charDefaults = { panel = { group = "upscale", compact = false, advanced = false }, hud = { shown = true } },
     onReady = Env.Wrap("RenderTuner saved variables", function(db, cdb, info)
         ns.db, ns.cdb, ns.loadInfo = db, cdb, info
     end),
@@ -285,6 +286,35 @@ function ns.ApplyLevel(preset)
     ns.AskRestart()
 end
 
+local function GogglesByKey(key)
+    for _, mode in ipairs(ns.Catalog.GOGGLES) do
+        if mode.key == key then return mode end
+    end
+end
+
+-- The pair of goggles that is on, or nil.
+function ns.Goggles()
+    local worn = ns.db and ns.db.settings.goggles
+    return worn and GogglesByKey(worn.key) or nil
+end
+
+-- Puts a pair of goggles on, taking off any that is on first; nil only takes off. What a
+-- pair changed is noted in settings.goggles, so it comes off the same after a reload.
+function ns.SetGoggles(mode)
+    local worn = ns.db.settings.goggles
+    if worn then
+        local was = GogglesByKey(worn.key)
+        ns.db.settings.goggles = nil
+        ns.ApplyTarget(ns.Model.GogglesOff(was, worn.before, ns.Apply.Live()), (was and was.label or "Goggles") .. " off")
+    end
+    if mode then
+        local target, before = ns.Model.GogglesOn(mode, ns.Apply.Live())
+        ns.db.settings.goggles = { key = mode.key, before = before }
+        ns.ApplyTarget(target, mode.label .. " on")
+    end
+    if ns.Hud then ns.Hud.Refresh() end
+end
+
 -- Puts a list of knobs back to their saved values: one group, or what a search found.
 function ns.RevertKnobs(knobs, what)
     local target = {}
@@ -362,6 +392,8 @@ local HELP = {
     { "preset [name]", "list the upscaling presets, or use one" },
     { "on | off", "upscale with the last preset used, or go back to native" },
     { "quality [name]", "list the overall quality presets, or use one" },
+    { "goggles [name | off]", "list the goggles, put a pair on, or take it off" },
+    { "hud", "show or hide the icon on the screen" },
     { "list [group | changed]", "the groups, the settings in one, or the ones that differ from kept" },
     { "set <variable> <value>", "set one console variable from the catalogue" },
     { "keep", "record the settings as they are now as the set Revert returns to (save does the same)" },
@@ -550,6 +582,34 @@ COMMANDS.capture = function(rest)
     end
 end
 
+COMMANDS.goggles = function(rest)
+    if not Ready() then return end
+    local word = Util.Trim(rest):lower()
+    local worn = ns.Goggles()
+    if word == "" then
+        for _, mode in ipairs(ns.Catalog.GOGGLES) do
+            out.Printf("  %s%s: %s", mode.key, mode == worn and " |cff00ff00(on)|r" or "", mode.note)
+        end
+        out.Print("/tuner goggles <name> puts a pair on, or takes it off if it is on; /tuner goggles off takes off any.")
+        return
+    end
+    if word == "off" then
+        if worn then ns.SetGoggles(nil) else out.Print("no goggles are on.") end
+        return
+    end
+    local mode = ns.Model.FindPreset(ns.Catalog.GOGGLES, word)
+    if not mode then
+        out.Printf("no goggles called %s. /tuner goggles lists them.", word)
+        return
+    end
+    ns.SetGoggles(mode ~= worn and mode or nil)
+end
+
+COMMANDS.hud = function()
+    if not Ready() then return end
+    ns.Hud.SetShown(not ns.cdb.hud.shown)
+end
+
 COMMANDS.check = function()
     if not Ready() then return end
     ns.Check.Start(true)
@@ -586,6 +646,7 @@ frame:SetScript("OnEvent", Env.Wrap("RenderTuner events", function(_, event)
     if ns.db then
         ns.Baseline()
         if ns.Launcher then ns.Launcher.Create() end
+        if ns.Hud then ns.Hud.Create() end
         for _, line in ipairs(ns.LoadLines(VERSION, ns.StatusText())) do out.Print(line) end
         if ns.Check then ns.Check.Login() end
     end

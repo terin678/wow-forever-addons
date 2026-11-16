@@ -209,6 +209,34 @@ function Model.Restart(changes)
 end
 
 --------------------------------------------------------------------------------
+-- Goggles
+--------------------------------------------------------------------------------
+
+-- Putting a pair on: what to set, and what each of those was before. A variable this
+-- client does not have is left out of both.
+function Model.GogglesOn(mode, live)
+    local target, before = {}, {}
+    for cvar, value in pairs(mode.set) do
+        if live[cvar] ~= nil then
+            target[cvar], before[cvar] = value, live[cvar]
+        end
+    end
+    return target, before
+end
+
+-- Taking a pair off: what to put back. A setting the player moved while the pair was on
+-- is theirs now and stays. `mode` is nil when the pair is no longer in the catalogue, and
+-- then everything noted goes back.
+function Model.GogglesOff(mode, before, live)
+    local target = {}
+    for cvar, was in pairs(before) do
+        local set = mode and mode.set[cvar]
+        if set == nil or live[cvar] == nil or Model.Same(live[cvar], set) then target[cvar] = was end
+    end
+    return target
+end
+
+--------------------------------------------------------------------------------
 -- Finding things by what the user typed
 --------------------------------------------------------------------------------
 
