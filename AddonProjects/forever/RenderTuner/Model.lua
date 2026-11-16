@@ -36,7 +36,7 @@ the way out.
     Model.ParseTyped(knob, text)           -> the variable's value for what a player typed, or nil
 ]]
 
-local Util = LibStub("LibICUtil-1.0")
+local Util = LibStub("LibKeelUtil-1.0")
 
 local Model = {}
 ns.Model = Model

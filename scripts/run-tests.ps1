@@ -3,7 +3,7 @@
   Run an addon's pure-module test suite headlessly with LuaJIT.
 
 .EXAMPLE
-  .\scripts\run-tests.ps1 -Flavor anniversary -Addon MarkedForDeath
+  .\scripts\run-tests.ps1 -Flavor forever -Addon RenderTuner
 #>
 param(
     [Parameter(Mandatory = $true)][string]$Flavor,

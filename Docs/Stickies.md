@@ -7,7 +7,7 @@ character, or to every character on your account.
 ## Install
 
 Extract into `_forever_\Interface\AddOns` so you get `AddOns\Stickies\Stickies.toc`.
-Stickies needs **ICKit**, which goes beside it (`AddOns\ICKit`). Restart the client after
+Stickies needs **Keel**, which goes beside it (`AddOns\Keel`). Restart the client after
 installing; a `/reload` does not pick up a new addon.
 
 The first time you log in there is one note on screen, "Welcome", and its four lines are
@@ -94,10 +94,10 @@ asks first.
 
 ## How it looks
 
-Stickies is drawn in ICKit's theme, which is the account's: **Forever** by default, the
-game's own colours. `/ickit theme paper` turns every note into a yellow sticky note, and
-`/ickit theme impulse` gives guild members the Impulse Control colours. See
-[ICKit](ICKit.md).
+Stickies is drawn in Keel's theme, which is the account's: **Forever** by default, the
+game's own colours. `/keel theme paper` turns every note into a yellow sticky note, and
+`/keel theme navy` gives a cooler navy and gold. See
+[Keel](Keel.md).
 
 ## In combat
 

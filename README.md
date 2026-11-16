@@ -1,19 +1,18 @@
 # WoW Forever addons
 
-Addons for WoW Forever (client 1.60.1, interface
-16001), made by the guild Impulse Control. Download the zips from
+Addons for WoW Forever (client 1.60.1, interface 16001). Download the zips from
 [Releases](https://github.com/terin678/wow-forever-addons/releases).
 
 | Addon | What it does | Guide |
 | --- | --- | --- |
-| [ICKit](AddonProjects/forever/ICKit) | The shared kit the others build on: Forever theme, widgets, sliders, lists, gallery (`/ickit`) | [Docs/ICKit.md](Docs/ICKit.md) |
+| [Keel](AddonProjects/forever/Keel) | The shared kit the others build on: Forever theme, widgets, sliders, lists, gallery (`/keel`) | [Docs/Keel.md](Docs/Keel.md) |
 | [Stickies](AddonProjects/forever/Stickies) | Notes on the screen, with a minimap and Addon Compartment entry | [Docs/Stickies.md](Docs/Stickies.md) |
 | [RenderTuner](AddonProjects/forever/RenderTuner) | A live control for about 160 graphics settings, upscaling and quality presets, search, Auto-set and undo (`/tuner`) | [Docs/RenderTuner.md](Docs/RenderTuner.md) |
 
 ## Install
 
 Extract the zips into `_forever_\Interface\AddOns` so you get
-`AddOns\ICKit\ICKit.toc` and so on, then restart the client. ICKit is required by the others.
+`AddOns\Keel\Keel.toc` and so on, then restart the client. Keel is required by the others.
 
 ## Working on it
 
@@ -24,8 +23,5 @@ python scripts/lint.py
 ```
 
 [CODING_STANDARDS.md](CODING_STANDARDS.md) and [CLAUDE.md](CLAUDE.md) cover conventions.
-The history of these files before this repo is in
-[terin678/ic-addons](https://github.com/terin678/ic-addons), where they grew out of the
-Anniversary addons.
 
 Licensed under the GPL 3.0, see [LICENSE](LICENSE).

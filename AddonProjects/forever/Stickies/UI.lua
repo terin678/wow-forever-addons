@@ -1,7 +1,7 @@
 local addonName, ns = ...
 
 --[[
-The notes on screen. One small panel per note, built from ICKit's widgets and drawn from
+The notes on screen. One small panel per note, built from Keel's widgets and drawn from
 what Notes.lua says: this file decides nothing about a note, it shows one and passes on
 what the player did to it.
 
@@ -17,8 +17,8 @@ evening of ticking and adding creates no new frames. A note's place is this char
 kept as fractions of the screen (W.GetPlace), for shared notes as well as their own.
 ]]
 
-local Theme = LibStub("LibICTheme-1.0")
-local W = LibStub("LibICWidgets-1.0")
+local Theme = LibStub("LibKeelTheme-1.0")
+local W = LibStub("LibKeelWidgets-1.0")
 
 local Notes = ns.Notes
 

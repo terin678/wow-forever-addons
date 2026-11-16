@@ -1,10 +1,9 @@
 """Mechanical checks for the addons in this repo.
 
     python scripts/lint.py            every addon
-    python scripts/lint.py TradeMaster
+    python scripts/lint.py RenderTuner
 
-There is no Lua on this machine, so these are the errors that can be caught without
-running the game. Each check is here because it shipped broken at least once.
+These are the errors that can be caught without running the game. Each check is here because it shipped broken at least once.
 """
 
 import io
@@ -244,20 +243,15 @@ def check_versions(addon_dir):
 LIB_MINOR = re.compile(r'local\s+MAJOR,\s*MINOR\s*=\s*"([^"]+)",\s*(\d+)')
 TOC_SAVED = re.compile(r"^##\s*SavedVariables(PerCharacter)?:", re.M)
 
-# The collaborator's addon. It has saved variables and no LibICCore, and it is not
-# ours to change; see SKILL.md.
-NOT_OURS = {"CutMaster"}
+# The library addon. It records its libraries' MINORs in Docs/<name>.md.
+LIB_ADDONS = ("Keel",)
 
-# The library addons, one per code base: ICLibs under the Anniversary set, ICKit under
-# the Forever one. Each records its libraries' MINORs in Docs/<name>.md.
-LIB_ADDONS = ("ICLibs", "ICKit")
-
-# What boots an addon's saved variables: LibICCore's Attach, or the Forever store.
-CORE_LIBS = ("LibICCore-1.0", "LibICStore-1.0")
+# What boots an addon's saved variables.
+CORE_LIBS = ("LibKeelStore-1.0",)
 
 
-def check_libs(flavor_dir, lib_addon="ICLibs"):
-    """Every LibIC* MINOR in the source is the one Docs/<library addon>.md records.
+def check_libs(flavor_dir, lib_addon="Keel"):
+    """Every LibKeel* MINOR in the source is the one Docs/<library addon>.md records.
 
     SKILL.md says to bump the MINOR on an API change and record it in the doc; the doc
     was found a version behind, which is exactly the state that makes the rule useless.
@@ -268,7 +262,7 @@ def check_libs(flavor_dir, lib_addon="ICLibs"):
         return
     doc_src = io.open(doc, encoding="utf-8").read()
     for name in sorted(os.listdir(libs_dir)):
-        if not name.startswith("LibIC"):
+        if not name.startswith("LibKeel"):
             continue
         path = os.path.join(libs_dir, name, name + ".lua")
         if not os.path.exists(path):
@@ -288,7 +282,7 @@ def check_libs(flavor_dir, lib_addon="ICLibs"):
 
 
 def check_core(addon_dir):
-    """An addon with saved variables boots them through LibICCore.
+    """An addon with saved variables boots them through the store.
 
     The library carries the load check that says whether the client handed the saved
     variables back; an addon that bootstraps by hand has no such line and its first
@@ -296,13 +290,13 @@ def check_core(addon_dir):
     """
     toc = toc_path(addon_dir)
     name = os.path.basename(addon_dir)
-    if name in NOT_OURS or not os.path.exists(toc):
+    if not os.path.exists(toc):
         return
     if not TOC_SAVED.search(io.open(toc, encoding="utf-8").read()):
         return
     core = os.path.join(addon_dir, "Core.lua")
     if not os.path.exists(core):
-        note(toc, 1, "declares saved variables but has no Core.lua to attach LibICCore in")
+        note(toc, 1, "declares saved variables but has no Core.lua to register with the store in")
         return
     src = io.open(core, encoding="utf-8").read()
     if not any(lib in src for lib in CORE_LIBS):

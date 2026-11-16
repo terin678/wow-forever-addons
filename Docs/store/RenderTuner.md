@@ -29,14 +29,14 @@ A few settings are marked **experimental** in the panel: dynamic render scale, H
 
 - **Commands:** `/tuner` opens the panel. `/tuner preset crisp`, `/tuner auto`, `/tuner undo`, `/tuner keep` and `/tuner revert` do what the buttons do. `/tuner help` lists the rest.
 - **Also opens from** the addon list beside the minimap (right-click it for the upscaling presets) and from a key you bind under Options, Keybindings, AddOns.
-- **ICKit is included.** The download has both folders, RenderTuner and ICKit. Keep them side by side in `Interface\AddOns`.
+- **Keel is included.** The download has both folders, RenderTuner and Keel. Keep them side by side in `Interface\AddOns`.
 - **In the AddOns list** it sits under a Graphics heading.
 - **Some changes need a restart.** Multisampling and HDR need the graphics engine restarted, which RenderTuner offers to do. One of Extreme's settings needs the game restarted, and it says so.
 
-## New in 0.6.0
+## New in 0.6.1
 
-- Twenty-four more settings, including ground clutter density and distance, the screenshot format (JPEG, PNG or TGA), a frame rate limit for loading screens, and shading rates for the world and for particles.
-- Extreme takes ground clutter to the client's ceiling. If you were already on Extreme, click it once more.
-- Fixed three ranges: Lighting quality has a fourth level, Particle density has five, and Light distance stops at 2048.
+- The shared library that ships inside RenderTuner is now called Keel. It was ICKit. Once you have updated, the old `ICKit` folder in `AddOns` can be deleted.
+- RenderTuner sits under Graphics in the AddOns list, and Keel under Libraries.
+- If you had picked a theme with `/ickit theme`, pick it again with `/keel theme`. The Impulse Control theme is now called Navy.
 
 Made by Malexis. Source and full documentation: https://github.com/terin678/wow-forever-addons

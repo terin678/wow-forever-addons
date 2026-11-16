@@ -12,8 +12,8 @@ by accident changes nothing that cannot be clicked back. Making a note is delibe
 it is in the right-click menu, beside showing and hiding them all.
 ]]
 
-local Util = LibStub("LibICUtil-1.0")
-local W = LibStub("LibICWidgets-1.0")
+local Util = LibStub("LibKeelUtil-1.0")
+local W = LibStub("LibKeelWidgets-1.0")
 
 local Notes = ns.Notes
 

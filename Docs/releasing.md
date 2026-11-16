@@ -1,6 +1,6 @@
 # Releasing RenderTuner
 
-Pushing a tag publishes RenderTuner, zipped with ICKit, to GitHub, CurseForge and Wago.
+Pushing a tag publishes RenderTuner, zipped with Keel, to GitHub, CurseForge and Wago.
 The workflow is `.github/workflows/release-rendertuner.yml`. It stops before publishing if
 the tag and `RenderTuner.toc` disagree, or if lint or a test fails.
 

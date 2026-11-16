@@ -31,8 +31,8 @@ and reads back what the client made of them, into RenderTunerDB.ranges.
     Probe.Ranges()                  -> report    asks the client, and sets variables
 ]]
 
-local Util = LibStub("LibICUtil-1.0")
-local Env = LibStub("LibICEnv-1.0")
+local Util = LibStub("LibKeelUtil-1.0")
+local Env = LibStub("LibKeelEnv-1.0")
 
 local Probe = {}
 ns.Probe = Probe

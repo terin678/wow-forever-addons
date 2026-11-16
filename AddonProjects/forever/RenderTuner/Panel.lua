@@ -41,9 +41,9 @@ bar, twice a second, only while the panel is open; and, for a few seconds after 
 the line that says what it did.
 ]]
 
-local Util = LibStub("LibICUtil-1.0")
-local W = LibStub("LibICWidgets-1.0")
-local Theme = LibStub("LibICTheme-1.0")
+local Util = LibStub("LibKeelUtil-1.0")
+local W = LibStub("LibKeelWidgets-1.0")
+local Theme = LibStub("LibKeelTheme-1.0")
 
 local Catalog = ns.Catalog
 local Model = ns.Model
@@ -253,7 +253,7 @@ local function BuildRow(knob)
     row:SetSize(LABEL_W + CONTROL_W + 4 + REVERT_W, ROW_H)
     row.knob = knob
     row.locked = false
-    row.icIndex = 0
+    row.keelIndex = 0
 
     row.band = row:CreateTexture(nil, "BACKGROUND")
     row.band:SetAllPoints(row)
@@ -647,7 +647,7 @@ local function Build()
     p.note:SetPoint("LEFT", p.head, "RIGHT", 10, 0)
     p.revertView = W.Button(body, "Revert these", 96, BUTTON_H - 2, {
         onClick = function()
-            if p.icList then ns.RevertKnobs(p.icList, p.head:GetText() or "these") end
+            if p.keelList then ns.RevertKnobs(p.keelList, p.head:GetText() or "these") end
         end,
     })
     p.revertView:SetPoint("RIGHT", p, "TOPRIGHT", -PAD, -(TOP + HEAD_H / 2 - 2))
@@ -655,7 +655,7 @@ local function Build()
         tip:AddLine("Revert these")
         tip:AddLine("Puts the settings in view back to their kept values.", 1, 1, 1, true)
     end)
-    p.icList = false
+    p.keelList = false
 
     p.scroll = W.Scroll(body, ROWS_W, 200, { step = ROW_H * 2 })
     p.scroll:SetPoint("TOPLEFT", p, "TOPLEFT", ROWS_X, -(TOP + HEAD_H))
@@ -774,10 +774,10 @@ function Panel.Refresh()
             row = BuildRow(knob)
             rows[knob.cvar] = row
         end
-        if row.icIndex ~= index then
+        if row.keelIndex ~= index then
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", frame.scroll.content, "TOPLEFT", 0, -(index - 1) * ROW_H)
-            row.icIndex = index
+            row.keelIndex = index
         end
         UpdateRow(row, live, saved)
         row:SetShown(true)
@@ -787,7 +787,7 @@ function Panel.Refresh()
     for cvar, row in pairs(rows) do
         if not inView[cvar] then
             row:SetShown(false)
-            row.icIndex = 0
+            row.keelIndex = 0
         end
     end
     frame.scroll:SetContentHeight(#list * ROW_H)
@@ -796,7 +796,7 @@ function Panel.Refresh()
         lastView = viewKey
     end
 
-    frame.icList = list
+    frame.keelList = list
     frame.head:SetText(title or "")
     frame.note:SetText(note or "")
     frame.revertView:SetShown(viewChanged > 0)

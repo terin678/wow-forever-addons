@@ -3,7 +3,7 @@
 The one place to tune WoW Forever's graphics: upscaling and quality presets, a live control
 for about 160 console variables, search, and a way back to what you had.
 
-**Version 0.6.0 has the floating panel and the commands**, an Extreme quality preset with
+**Version 0.6.1 has the floating panel and the commands**, an Extreme quality preset with
 the experimental extras, and a panel that can get out of the way of the world it tunes. It
 says which quality level the game recommends for your machine, warns before Extreme when your
 frame rate is already low, and measures your frame rate and takes the step it suggests
@@ -18,7 +18,7 @@ back to. Auto-set counts down while it measures and says what it did in the titl
 bar under its button; the frame rate window closes on Escape.
 
 **New in 0.5.1:** the AddOns list shows RenderTuner on its own under a **Graphics** heading,
-not under Impulse Control and ICKit.
+not nested under the shared library.
 
 **New in 0.6.0:** twenty-four more settings, after the client's whole list of console
 variables was read again. Among them: ground clutter density and distance, which go well
@@ -27,6 +27,11 @@ screens; refraction; shading rates for the world and for particles; and characte
 compression, highlights and glow. Extreme now takes ground clutter to the client's ceiling.
 Three ranges were wrong and are put right: Lighting quality has a fourth level, Particle
 density has five, not six, and Light distance stops at 2048, the most the client keeps.
+
+**New in 0.6.1:** the shared library RenderTuner needs is now called **Keel**. It was ICKit.
+Nothing in RenderTuner itself changes. The download carries the `Keel` folder; the old
+`ICKit` folder can be deleted. If you had picked a theme with `/ickit theme`, pick it again
+with `/keel theme`, where the Impulse Control theme is now called Navy.
 
 ## What the client can and cannot do
 
@@ -46,7 +51,7 @@ does, and it does not look the same.
 ## Install
 
 Extract into `_forever_\Interface\AddOns` so you get `AddOns\RenderTuner\RenderTuner.toc`.
-RenderTuner needs **ICKit**, which goes beside it (`AddOns\ICKit`). Restart the client after
+RenderTuner needs **Keel**, which goes beside it (`AddOns\Keel`). Restart the client after
 installing; a `/reload` does not pick up a new addon.
 
 ## Some settings can crash the game

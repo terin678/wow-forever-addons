@@ -17,25 +17,25 @@ addon keeps two copies to go back to and none that could disagree with the game:
     original   what was live the first time the addon ran: the way back to before it
 
     Catalog.lua   the knobs, as data
-    Model.lua     every decision about values, pure                    (LibICUtil)
-    Apply.lua     the only file that reads or sets a console variable  (LibICEnv)
-    Panel.lua     the floating panel: every knob as a control          (LibICWidgets, LibICTheme)
-    Launcher.lua  the way in from the addon list beside the minimap    (LibICWidgets)
-    Probe.lua     what the client was asked while this was being built (LibICEnv)
-    Core.lua      this file: saved tables, commands, login             (LibICStore, LibICConsole)
-    Tests.lua     the cases                                            (LibICTest)
+    Model.lua     every decision about values, pure                    (LibKeelUtil)
+    Apply.lua     the only file that reads or sets a console variable  (LibKeelEnv)
+    Panel.lua     the floating panel: every knob as a control          (LibKeelWidgets, LibKeelTheme)
+    Launcher.lua  the way in from the addon list beside the minimap    (LibKeelWidgets)
+    Probe.lua     what the client was asked while this was being built (LibKeelEnv)
+    Core.lua      this file: saved tables, commands, login             (LibKeelStore, LibKeelConsole)
+    Tests.lua     the cases                                            (LibKeelTest)
 
 Nothing here runs while the game is idle: the addon acts on a command, a click or a
 drag, and at login.
 ]]
 
-local VERSION = "0.6.0"
+local VERSION = "0.6.1"
 
-local Util = LibStub("LibICUtil-1.0")
-local Test = LibStub("LibICTest-1.0")
-local Env = LibStub("LibICEnv-1.0")
-local Store = LibStub("LibICStore-1.0")
-local Console = LibStub("LibICConsole-1.0")
+local Util = LibStub("LibKeelUtil-1.0")
+local Test = LibStub("LibKeelTest-1.0")
+local Env = LibStub("LibKeelEnv-1.0")
+local Store = LibStub("LibKeelStore-1.0")
+local Console = LibStub("LibKeelConsole-1.0")
 
 local out = Console.New("RenderTuner", {
     debug = function() return ns.db ~= nil and ns.db.settings.debug == true end,
@@ -334,7 +334,7 @@ end
 -- hint are still there.
 function ns.AskRestart()
     if not ns.pendingEngine then return end
-    LibStub("LibICWidgets-1.0").Confirm(
+    LibStub("LibKeelWidgets-1.0").Confirm(
         "A change you made shows only after the graphics engine restarts.\n\nThe screen blinks. Restart it now?",
         ns.Restart)
 end

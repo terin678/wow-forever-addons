@@ -365,7 +365,7 @@ end)
 -- In game this would draw made-up notes over the player's own, so it runs only under the
 -- harness, where the frames are stubs. It catches a script error in the layout code,
 -- which is all a stub can catch; how it looks is for a person.
-if IC_HEADLESS then
+if KEEL_HEADLESS then
     T.Case("UI: every note gets a panel, a deleted note gives its panel back", function()
         local realDB, realCDB = ns.db, ns.cdb
         local db, cdb = Book()

@@ -5,14 +5,13 @@ Target interface: 16001 (product `wow_classic_beta`, version 1.60.1). Client fol
 
 | Addon | Version | Guide |
 | --- | --- | --- |
-| ICKit | 0.13.1 | [Docs/ICKit.md](../../Docs/ICKit.md) |
-| Stickies | 0.1.0 | [Docs/Stickies.md](../../Docs/Stickies.md) |
-| RenderTuner | 0.6.0 | [Docs/RenderTuner.md](../../Docs/RenderTuner.md) |
+| Keel | 0.14.0 | [Docs/Keel.md](../../Docs/Keel.md) |
+| Stickies | 0.1.1 | [Docs/Stickies.md](../../Docs/Stickies.md) |
+| RenderTuner | 0.6.1 | [Docs/RenderTuner.md](../../Docs/RenderTuner.md) |
 
-`ICKit` is the library addon for this flavor. Addons here list it under `## Dependencies`,
+`Keel` is the library addon for this flavor. Addons here list it under `## Dependencies`,
 so it must be installed alongside them; `scripts/package.ps1` bundles it into their zips
 and `scripts/deploy.ps1` links it into the game folder with them.
 
-This is a different code base from the Anniversary set. It is built bottom-up, one layer
-at a time, and nothing is ported until the layers it needs exist: see
+The code base is built bottom-up, one layer at a time, and nothing is added until the layers it needs exist: see
 [Docs/forever/VISION.md](../../Docs/forever/VISION.md) before adding anything here.

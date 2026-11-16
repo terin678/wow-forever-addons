@@ -6,7 +6,7 @@ addons beside the minimap. Left-click opens or closes the panel; right-click is 
 presets, for changing the render scale without opening anything.
 ]]
 
-local W = LibStub("LibICWidgets-1.0")
+local W = LibStub("LibKeelWidgets-1.0")
 
 local Launcher = {}
 ns.Launcher = Launcher

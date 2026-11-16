@@ -1,21 +1,19 @@
 # wow-forever-addons
 
-Impulse Control's addons for WoW Forever (interface 16001, client folder `_forever_`).
+Addons for WoW Forever (interface 16001, client folder `_forever_`).
 Read `CODING_STANDARDS.md` before changing any Lua, and `Docs/forever/VISION.md` before
 adding anything: this is built bottom-up, one layer at a time.
 
 ## Where things are
 
 - Addons: `AddonProjects/forever/<AddonName>/`. The addon folder is exactly what ships.
-  `ICKit` is the library addon the others depend on.
+  `Keel` is the library addon the others depend on.
 - User docs: `Docs/<AddonName>.md`. Update it whenever a command or panel changes.
 - What the client has been proven to do: `Docs/client-reference.md`.
 - Scripts: `scripts/deploy.ps1` (link an addon into the game folder), `scripts/package.ps1`
   (zip it), `scripts/run-tests.ps1` (headless cases), `scripts/lint.py`. Flavor table:
   `scripts/flavors.psd1`.
-- Skill for addon work: `.claude/skills/wow-addon-dev/SKILL.md` and `client-api.md`. Its
-  examples come from the Anniversary addons this code base grew out of (the repo
-  terin678/ic-addons); the client rules in it still apply.
+- Skill for addon work: `.claude/skills/wow-addon-dev/SKILL.md` and `client-api.md`.
 
 ## Git workflow
 
@@ -39,8 +37,8 @@ adding anything: this is built bottom-up, one layer at a time.
 
 1. `python scripts/lint.py`.
 2. `scripts/run-tests.ps1 -Flavor forever -Addon <Addon>`: the addon's cases under LuaJIT
-   against a stub client. A case that needs real widgets returns early on `IC_HEADLESS`.
-3. The same cases in game: `/ickit test`, `/stickies test`, `/tuner test`.
+   against a stub client. A case that needs real widgets returns early on `KEEL_HEADLESS`.
+3. The same cases in game: `/keel test`, `/sticky test`, `/tuner test`.
 4. The `wow-ui-reviewer` agent on every UI file touched.
 
 Then deploy, restart or `/reload`, run the commands, check BugSack. Say plainly when

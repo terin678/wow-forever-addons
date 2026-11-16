@@ -1,4 +1,4 @@
-# Pushing a tag such as rendertuner-v0.4.0 tests RenderTuner, zips it with ICKit, and
+# Pushing a tag such as rendertuner-v0.4.0 tests RenderTuner, zips it with Keel, and
 # publishes the zip to GitHub, CurseForge and Wago. Docs/releasing.md has the one-time setup.
 #
 # Run by hand (Actions, Run workflow, or gh workflow run) it publishes a tag that is already
@@ -54,12 +54,12 @@ jobs:
         run: |
           sudo apt-get install -y luajit
           python3 scripts/lint.py
-          for addon in ICKit RenderTuner; do luajit scripts/test-harness.lua "AddonProjects/forever/$addon"; done
+          for addon in Keel RenderTuner; do luajit scripts/test-harness.lua "AddonProjects/forever/$addon"; done
 
-      - name: Zip RenderTuner with ICKit
+      - name: Zip RenderTuner with Keel
         run: |
           zip="RenderTuner-$VERSION-forever.zip"
-          (cd AddonProjects/forever && zip -rq "$GITHUB_WORKSPACE/$zip" RenderTuner ICKit)
+          (cd AddonProjects/forever && zip -rq "$GITHUB_WORKSPACE/$zip" RenderTuner Keel)
           echo "ZIP=$zip" >> "$GITHUB_ENV"
           # The tag's message is the changelog; fetching again keeps an annotated tag's text.
           git fetch --tags --force --quiet

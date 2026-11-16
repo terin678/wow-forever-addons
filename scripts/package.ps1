@@ -4,15 +4,15 @@
 
 .DESCRIPTION
   By default the zip also carries the addon's required addons from the same flavor
-  (## Dependencies), so one archive extracts into a working install for a guildmate.
-  -NoDeps ships the one folder only, which is what a CurseForge project wants: ICLibs is
-  its own project there and each addon marks it as a required dependency.
+  (## Dependencies), so one archive extracts into a working install.
+  -NoDeps ships the one folder only, which is what a store upload wants: Keel is its
+  own project there and each addon marks it as a required dependency.
 
   Prints a summary and returns the path of the zip it wrote.
 
 .EXAMPLE
-  .\scripts\package.ps1 -Flavor anniversary -Addon MalexisAuctionWatcher
-  .\scripts\package.ps1 -Flavor anniversary -Addon MalexisAuctionWatcher -NoDeps -OutDir dist\curseforge
+  .\scripts\package.ps1 -Flavor forever -Addon RenderTuner
+  .\scripts\package.ps1 -Flavor forever -Addon RenderTuner -NoDeps -OutDir dist\curseforge
 #>
 param(
     [Parameter(Mandatory = $true)][string]$Flavor,
@@ -61,7 +61,7 @@ if (-not $NoDeps) {
 # 5.1 stores paths with backslashes. The zip spec requires forward slashes: Windows
 # Explorer and 7-Zip cope with the backslashes, but macOS Archive Utility and most Linux
 # tools do not, and extract the whole addon as one flat file literally named
-# "MarkedForDeath\Core.lua". Anything meant to leave this guild has to open anywhere.
+# "RenderTuner\Core.lua". A zip has to open anywhere.
 # Both: ZipFile and the CreateEntryFromFile extension are in .FileSystem, ZipArchiveMode
 # is in the base assembly, and 5.1 loads neither on its own.
 Add-Type -AssemblyName System.IO.Compression

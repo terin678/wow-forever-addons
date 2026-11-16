@@ -20,7 +20,7 @@ Every operation that can be refused returns ok, reason. A nil reason means there
 nothing worth saying (a blank line was typed).
 ]]
 
-local Util = LibStub("LibICUtil-1.0")
+local Util = LibStub("LibKeelUtil-1.0")
 
 local Notes = {}
 ns.Notes = Notes

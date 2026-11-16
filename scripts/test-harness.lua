@@ -3,14 +3,11 @@ Headless runner for an addon's test cases, under LuaJIT.
 
     luajit scripts/test-harness.lua <path to addon folder>
 
-Two kinds of addon live in this repo and both run here:
-
-  * The ICLibs shape (every file opens `local addonName, ns = ...`, LibICCore attaches
-    the harness). The addon's .toc is the load order; ICLibs' own .toc is loaded first;
-    every file gets (addonName, ns); then ADDON_LOADED is delivered to every frame that
-    asked for it, which is how LibICCore boots ns.db, and ns.Tests.Run() runs.
-  * MarkedForDeath, which predates that shape: a fixed file list, a global table, and
-    its own Tests.Run() returning a boolean. Kept as it was.
+Every file of an addon here opens `local addonName, ns = ...`. The addons named in the
+.toc's ## Dependencies are loaded first, each from its own .toc; then the addon's .toc
+is the load order and every file gets (addonName, ns); then ADDON_LOADED is delivered to
+every frame that asked for it, which is how the store boots ns.db, and ns.Tests.Run()
+runs.
 
 The client is a stub. A frame answers any method it is asked for with a no-op, records
 the events it registers and the scripts it sets, and that is all the client the logic
@@ -78,10 +75,8 @@ local function Stub(kind, name)
     f.IsShown = function(self) return self._shown end
     f.IsVisible = function(self) return self._shown end
     f.GetName = function(self) return self._name end
-    -- The frame this was made on, not UIParent for everyone. A library that
-    -- reads a field its own button set, through a texture's GetParent, got
-    -- UIParent's catch-all function instead; LibDBIcon's icon does exactly that,
-    -- which is what kept CutMaster from running here at all.
+    -- The frame this was made on, not UIParent for everyone: code that reads a field
+    -- its own button set, through a texture's GetParent, needs the real parent.
     f.GetParent = function(self) return self._parent or _G.UIParent end
     f.SetParent = function(self, p) self._parent = p end
     f.SetText = function(self, s) self._text = s end
@@ -117,8 +112,7 @@ local function Stub(kind, name)
         return child
     end
     f.GetFontString = function(self) return Stub("FontString") end
-    -- A real group, not the catch-all's nil, so a library can build its fades
-    -- on it. LibDBIcon's minimap button does, as soon as it is registered.
+    -- A real group, not the catch-all's nil, so a library can build its fades on it.
     f.CreateAnimationGroup = function(self)
         local group = Stub("AnimationGroup")
         group._parent = self
@@ -136,7 +130,7 @@ local function Stub(kind, name)
 end
 
 -- Tests that need a real client (a page drawing itself) read this and step aside.
-_G.IC_HEADLESS = true
+_G.KEEL_HEADLESS = true
 _G.CreateFrame = function(kind, name, parent)
     local f = Stub(kind or "Frame", name)
     f._parent = parent
@@ -174,7 +168,7 @@ _G.IsInGuild = function() return false end
 _G.GetItemInfo = function() return nil end
 _G.GetItemCount = function() return 0 end
 _G.GetItemIcon = function() return nil end
-_G.GetBuildInfo = function() return "2.5.6", "68184", "", 20506 end
+_G.GetBuildInfo = function() return "1.60.1", "70124", "", 16001 end
 _G.GetChannelList = function() return end
 _G.GetChatWindowInfo = function() return nil end
 _G.GetCursorPosition = function() return 0, 0 end
@@ -231,12 +225,6 @@ local function TocDeps(dir)
     return deps
 end
 
--- The stub answers as the Anniversary client unless the addon's own .toc targets the
--- Forever one, whose addons read the build to decide what the client offers.
-if tonumber((TocField(addonDir, "Interface") or ""):match("%d+")) == 16001 then
-    _G.GetBuildInfo = function() return "1.60.1", "70124", "", 16001 end
-end
-
 local function LoadFile(path, ...)
     local chunk, err = loadfile(path)
     if not chunk then
@@ -265,69 +253,24 @@ local function Fire(event, ...)
 end
 
 --------------------------------------------------------------------------------
--- MarkedForDeath, as it was
---------------------------------------------------------------------------------
-
-if addonName == "MarkedForDeath" then
-    -- Core.lua cannot be loaded here because it creates a frame at file scope, but the
-    -- logic modules register their client-side setup through RegisterInit at file scope.
-    -- Seed a no-op so those calls succeed; the registered functions are never run
-    -- headlessly, which is the point of keeping them out of file scope.
-    _G.MarkedForDeath = { RegisterInit = function() end }
-    local files = {
-        "Helpers.lua", "JSON.lua", "Data_Mobs.lua", "Data_Auras.lua", "Data_Bosses.lua",
-        "Log.lua", "Actions.lua", "Roles.lua", "Rules.lua", "Allocator.lua", "Candidates.lua",
-        "Marker.lua", "Conflicts.lua", "Chatter.lua", "ChatCue.lua", "CombatLog.lua", "UI_ActionBar.lua",
-        "Comms.lua", "RaidCheck.lua", "Encounters.lua", "Tanks.lua", "Healers.lua", "Tests.lua",
-    }
-    for _, name in ipairs(files) do
-        local path = addonDir .. "/" .. name
-        local f = io.open(path, "r")
-        if f then
-            f:close()
-            LoadFile(path, "MarkedForDeath")
-        end
-    end
-    local MFD = _G.MarkedForDeath
-    if not (MFD and MFD.Tests) then
-        io.stderr:write("no test registry found; did Tests.lua load?\n")
-        os.exit(1)
-    end
-    os.exit(MFD.Tests.Run() and 0 or 1)
-end
-
---------------------------------------------------------------------------------
--- The ICLibs shape
+-- Dependencies, then the addon
 --------------------------------------------------------------------------------
 
 -- What the addon requires first, each from its own .toc, the way the client orders a
--- load: ICLibs for the Anniversary set (so LibStub, LibICCore and LibICUI exist), ICKit
--- for the Forever one. A dependency that is not a sibling folder (Auctionator, say) is
--- somebody else's addon and is skipped. The third-party libraries inside load too; they
--- are pure at file scope.
+-- load: Keel, so LibStub and the LibKeel libraries exist. A dependency that is not a
+-- sibling folder is somebody else's addon and is skipped.
 local function LoadLibrary(name)
     local dir = flavorDir .. "/" .. name
     local libFiles = TocFiles(dir)
     if not libFiles then return false end
     local libNS = {}
     for _, rel in ipairs(libFiles) do
-        -- LibDBIcon builds minimap buttons, which is client work by design; every addon
-        -- fetches it silently and does without, so headless does without too.
-        if not rel:find("LibDBIcon", 1, true) then
-            LoadFile(dir .. "/" .. rel, name, libNS)
-        end
+        LoadFile(dir .. "/" .. rel, name, libNS)
     end
     return true
 end
 
-local loaded = 0
-for _, dep in ipairs(TocDeps(addonDir)) do
-    if LoadLibrary(dep) then loaded = loaded + 1 end
-end
--- An addon that names none (CutMaster carries its own libraries) still gets the flavor's
--- ICLibs when there is one, as it always has. A library addon testing itself in a flavor
--- without ICLibs simply loads nothing first.
-if loaded == 0 then LoadLibrary("ICLibs") end
+for _, dep in ipairs(TocDeps(addonDir)) do LoadLibrary(dep) end
 
 local files = TocFiles(addonDir)
 if not files then
@@ -340,12 +283,6 @@ for _, rel in ipairs(files) do
 end
 
 Fire("ADDON_LOADED", addonName)
-
--- MalexisAuctionWatcher predates the private namespace: LibICCore attached to its
--- global table, and that is where its Tests live.
-if not (ns.Tests and ns.Tests.Run) and type(_G[addonName]) == "table" then
-    ns = _G[addonName]
-end
 
 if not (ns.Tests and ns.Tests.Run) then
     io.stderr:write("no ns.Tests.Run; did the addon set ns.Tests and did Tests.lua load?\n")
