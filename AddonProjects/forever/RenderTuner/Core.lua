@@ -305,11 +305,11 @@ function ns.SetGoggles(mode)
     if worn then
         local was = GogglesByKey(worn.key)
         ns.db.settings.goggles = nil
-        ns.ApplyTarget(ns.Model.GogglesOff(was, worn.before, ns.Apply.Live()), (was and was.label or "Goggles") .. " off")
+        ns.ApplyTarget(ns.Model.GogglesOff(worn.set, worn.before, ns.Apply.Live()), (was and was.label or "Goggles") .. " off")
     end
     if mode then
-        local target, before = ns.Model.GogglesOn(mode, ns.Apply.Live())
-        ns.db.settings.goggles = { key = mode.key, before = before }
+        local target, before = ns.Model.GogglesOn(mode, ns.Apply.Live(), ns.Apply.Knobs())
+        ns.db.settings.goggles = { key = mode.key, set = target, before = before }
         ns.ApplyTarget(target, mode.label .. " on")
     end
     if ns.Hud then ns.Hud.Refresh() end

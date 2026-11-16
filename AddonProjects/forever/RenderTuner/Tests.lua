@@ -273,28 +273,42 @@ T.Case("Catalog: every pair of goggles sets real knobs, inside their own range",
         keys[mode.key] = true
         T.Eq(type(mode.label) == "string" and type(mode.note) == "string" and type(mode.icon) == "string", true,
             mode.key .. " has a label, a note and an icon")
-        T.Eq(next(mode.set) ~= nil, true, mode.key .. " sets something")
-        for cvar, value in pairs(mode.set) do
+        T.Eq(next(mode.set or {}) ~= nil or next(mode.shift or {}) ~= nil, true, mode.key .. " changes something")
+        for cvar, value in pairs(mode.set or {}) do
             local knob = Model.Find(Catalog.KNOBS, cvar)
             T.Eq(knob ~= nil, true, cvar .. " is in the catalogue")
             if knob then T.Eq(Model.Clamp(knob, value), value, cvar .. " is given a value it can hold") end
+        end
+        for cvar, by in pairs(mode.shift or {}) do
+            local knob = Model.Find(Catalog.KNOBS, cvar)
+            T.Eq(knob ~= nil and knob.kind == "slider", true, cvar .. " is a slider in the catalogue")
+            T.Eq((mode.set or {})[cvar], nil, cvar .. " is shifted or set, not both")
+            T.Eq(by ~= 0, true, cvar .. " moves")
         end
     end
 end)
 
 T.Case("Model.GogglesOn and GogglesOff: note what was, put back only what is still the pair's", function()
-    local mode = { set = { A = 40, B = 0, Missing = 1 } }
-    local target, before = Model.GogglesOn(mode, { A = 50, B = 1 })
+    local knobs = {
+        { cvar = "A", kind = "slider", min = 0, max = 100, step = 1 },
+        { cvar = "S", kind = "slider", min = 0, max = 100, step = 1 },
+    }
+    local mode = { set = { A = 40, B = 0, Missing = 1 }, shift = { S = -10, Gone = 5 } }
+    local target, before = Model.GogglesOn(mode, { A = 50, B = 1, S = 35 }, knobs)
     T.Eq(target.A, 40, "what to set")
     T.Eq(before.A, 50, "and what it was")
+    T.Eq(target.S, 25, "a shift moves from where the player had it")
+    T.Eq(before.S, 35, "and notes that")
     T.Eq(target.Missing, nil, "a variable this client lacks is not set")
-    T.Eq(before.Missing, nil, "or noted")
+    T.Eq(before.Gone, nil, "or noted")
+    T.Eq(Model.GogglesOn(mode, { S = 4 }, knobs).S, 0, "a shift stops at the end of the slider")
 
-    local back = Model.GogglesOff(mode, before, { A = 40, B = 2 })
+    local back = Model.GogglesOff(target, before, { A = 40, B = 2, S = 25 })
     T.Eq(back.A, 50, "a value still where the pair left it goes back")
+    T.Eq(back.S, 35, "a shifted one too")
     T.Eq(back.B, nil, "one the player moved since is left alone")
     back = Model.GogglesOff(nil, before, { A = 40, B = 2 })
-    T.Eq(back.B, 1, "a pair no longer in the catalogue hands everything back")
+    T.Eq(back.B, 1, "a note with no record of what was set hands everything back")
 end)
 
 T.Case("Catalog: every group is in a cluster, and the presets run from least to most", function()
@@ -802,7 +816,8 @@ if KEEL_HEADLESS then
             cvars.Brightness, cvars.weatherDensity = "50", "3"
             ns.Baseline()
             run("goggles snow")
-            T.Eq(cvars.Brightness, "40", "the pair's values are set")
+            T.Eq(cvars.Brightness, "40", "brightness comes down from where the player had it")
+            T.Eq(cvars.bloomEnable, "0", "and the fixed values are set")
             T.Eq(ns.Goggles(), Catalog.GOGGLES[1], "and it is the pair that is on")
             T.Eq(ns.db.settings.goggles.before.Brightness, 50, "with what each was noted in the saved table")
             run("set weatherDensity 2")

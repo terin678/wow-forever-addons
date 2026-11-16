@@ -212,26 +212,33 @@ end
 -- Goggles
 --------------------------------------------------------------------------------
 
--- Putting a pair on: what to set, and what each of those was before. A variable this
--- client does not have is left out of both.
-function Model.GogglesOn(mode, live)
+-- Putting a pair on: what to set, and what each of those was before. `set` values are
+-- taken as they are; `shift` moves a slider by an amount from where it is, held inside the
+-- slider's own range. A variable this client does not have is left out of both.
+function Model.GogglesOn(mode, live, knobs)
     local target, before = {}, {}
-    for cvar, value in pairs(mode.set) do
+    for cvar, value in pairs(mode.set or {}) do
         if live[cvar] ~= nil then
             target[cvar], before[cvar] = value, live[cvar]
+        end
+    end
+    for cvar, by in pairs(mode.shift or {}) do
+        local knob = Model.Find(knobs, cvar)
+        if knob and live[cvar] ~= nil then
+            target[cvar], before[cvar] = Model.Clamp(knob, live[cvar] + by), live[cvar]
         end
     end
     return target, before
 end
 
--- Taking a pair off: what to put back. A setting the player moved while the pair was on
--- is theirs now and stays. `mode` is nil when the pair is no longer in the catalogue, and
--- then everything noted goes back.
-function Model.GogglesOff(mode, before, live)
+-- Taking a pair off: what to put back. `set` is what putting it on set (the target above),
+-- `before` what each was. A setting the player moved while the pair was on is theirs now
+-- and stays.
+function Model.GogglesOff(set, before, live)
     local target = {}
     for cvar, was in pairs(before) do
-        local set = mode and mode.set[cvar]
-        if set == nil or live[cvar] == nil or Model.Same(live[cvar], set) then target[cvar] = was end
+        local put = set and set[cvar]
+        if put == nil or live[cvar] == nil or Model.Same(live[cvar], put) then target[cvar] = was end
     end
     return target
 end

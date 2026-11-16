@@ -245,7 +245,7 @@ is hard to look at, and put back as they were when you take the pair off.
 
 | Pair | For | What it sets |
 | --- | --- | --- |
-| Snow goggles | A blizzard or a white-out | Brightness 40, Contrast 55, Bloom off, Full-screen glow off, Weather density 1 |
+| Snow goggles | A blizzard or a white-out | Brightness 10 lower and Contrast 5 higher than you have them, Bloom off, Full-screen glow off, Weather density 1 |
 
 Three ways to put a pair on or take it off:
 
