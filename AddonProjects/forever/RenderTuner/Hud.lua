@@ -5,7 +5,8 @@ The icon on the screen: a small square that stays where it is dragged, for the t
 a click without opening the panel. Today that is the goggles.
 
 A click opens a ring of options around it, one per pair of goggles, which spiral out of the
-icon and back into it; a click on one puts that pair on or takes it off. A right-click is
+icon; a click on one puts that pair on or takes it off, and the ring stays open until the
+icon is clicked again, when they spiral back into it. A right-click is
 the menu, a drag moves the icon, and while a pair is on the icon wears that pair's picture.
 
 Where an option is at each moment is Model.RingSpot, which is pure. The ring is animated
@@ -56,7 +57,7 @@ local function Tip(tip)
     local mode = ns.Goggles()
     tip:AddLine("RenderTuner")
     tip:AddLine(mode and (mode.label .. " are on") or "No goggles on", 1, 1, 1)
-    tip:AddLine("Click for the goggles", 0.7, 0.7, 0.7)
+    tip:AddLine(ring.dir > 0 and "Click to put the goggles away" or "Click for the goggles", 0.7, 0.7, 0.7)
     tip:AddLine("Right-click for the menu", 0.7, 0.7, 0.7)
     tip:AddLine("Drag to move", 0.7, 0.7, 0.7)
 end
@@ -103,8 +104,8 @@ local function BuildRing()
         option:EnableMouse(true)
         option:SetScript("OnMouseUp", function(self, button)
             if button ~= "LeftButton" then return end
+            -- The ring stays open: pairs can be tried one after another, and the icon puts it away.
             ns.SetGoggles(ns.Goggles() ~= self.mode and self.mode or nil)
-            SetOpen(false)
         end)
         W.Tooltip(option, function(tip, self)
             tip:AddLine(self.mode.label)
