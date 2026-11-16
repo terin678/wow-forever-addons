@@ -1713,7 +1713,7 @@ T.Case("Widgets: a list fills pooled rows in full and blanks the rest", function
 
     list:SetItems({ { name = "Last" } })
     T.Eq(list.rows[1].cells[1]:GetText(), "Last", "a shorter list starts again at the top")
-    T.Eq(list.rows[1].cells[2]:GetText(), "", "a missing value is blank, not the last item's")
+    T.Eq(list.rows[1].cells[2]:GetText() or "", "", "a missing value is blank, not the last item's")
     T.Eq(list.rows[1].keelSelected, false, "and nothing of the old selection survives")
     T.Eq(list.rows[2]:IsShown(), false, "unused rows hide")
     T.Eq(list.rows[2].keelItem, false, "holding no item")
