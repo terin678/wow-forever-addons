@@ -19,9 +19,8 @@ the help, as does "help" unless the addon supplies its own. help rows are
 { "new [title]", "start a note" }. `taken` says another addon already held the slash key,
 which the addon reports at login rather than leave as a confusing afternoon.
 
-Lifted from LibICCore-1.0's output and slash dispatcher, without its reach into the
-addon's saved variables: the caller supplies the debug test and, if it wants one, the
-chat frame.
+It never reaches into the addon's saved variables: the caller supplies the debug test
+and, if it wants one, the chat frame.
 ]]
 
 local MAJOR, MINOR = "LibKeelConsole-1.0", 1
@@ -105,7 +104,7 @@ end
 -- Registers the command with the client. Returns handler, taken.
 function Console.Slash(spec)
     assert(type(spec) == "table" and type(spec.key) == "string" and type(spec.slash) == "table"
-        and spec.out, "LibICConsole: Slash needs key, slash and out")
+        and spec.out, "LibKeelConsole: Slash needs key, slash and out")
     local handler = Console.Dispatcher(spec)
     local taken = type(SlashCmdList) == "table" and SlashCmdList[spec.key] ~= nil
     for i, s in ipairs(spec.slash) do

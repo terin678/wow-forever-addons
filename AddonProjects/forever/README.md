@@ -13,6 +13,5 @@ Target interface: 16001 (product `wow_classic_beta`, version 1.60.1). Client fol
 so it must be installed alongside them; `scripts/package.ps1` bundles it into their zips
 and `scripts/deploy.ps1` links it into the game folder with them.
 
-This is a different code base from the Anniversary set. It is built bottom-up, one layer
-at a time, and nothing is ported until the layers it needs exist: see
+The code base is built bottom-up, one layer at a time, and nothing is added until the layers it needs exist: see
 [Docs/forever/VISION.md](../../Docs/forever/VISION.md) before adding anything here.

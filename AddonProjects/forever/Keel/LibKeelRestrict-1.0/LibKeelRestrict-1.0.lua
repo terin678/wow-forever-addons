@@ -245,7 +245,7 @@ end
 -- on. Nothing is called for the State at the time of the call: read Restrict.Now() for
 -- that. Returns a function that stops the listening.
 function Restrict.OnChange(fn)
-    assert(type(fn) == "function", "LibICRestrict: OnChange needs a function")
+    assert(type(fn) == "function", "LibKeelRestrict: OnChange needs a function")
     Listen()
     listeners[#listeners + 1] = fn
     return function()

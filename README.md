@@ -23,8 +23,5 @@ python scripts/lint.py
 ```
 
 [CODING_STANDARDS.md](CODING_STANDARDS.md) and [CLAUDE.md](CLAUDE.md) cover conventions.
-The history of these files before this repo is in
-[terin678/ic-addons](https://github.com/terin678/ic-addons), where they grew out of the
-Anniversary addons.
 
 Licensed under the GPL 3.0, see [LICENSE](LICENSE).

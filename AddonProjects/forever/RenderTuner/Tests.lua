@@ -703,7 +703,7 @@ end)
 -- In game these would change the player's real settings, so they run only under the
 -- harness. The client here is a table of console variables that answers the four calls
 -- Apply.lua makes.
-if IC_HEADLESS then
+if KEEL_HEADLESS then
     local function WithClient(body)
         local cvars, sets = {}, {}
         for _, knob in ipairs(Catalog.KNOBS) do cvars[knob.cvar] = knob.text and knob.text[2] or "1" end

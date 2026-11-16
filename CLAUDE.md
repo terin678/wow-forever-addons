@@ -13,9 +13,7 @@ adding anything: this is built bottom-up, one layer at a time.
 - Scripts: `scripts/deploy.ps1` (link an addon into the game folder), `scripts/package.ps1`
   (zip it), `scripts/run-tests.ps1` (headless cases), `scripts/lint.py`. Flavor table:
   `scripts/flavors.psd1`.
-- Skill for addon work: `.claude/skills/wow-addon-dev/SKILL.md` and `client-api.md`. Its
-  examples come from the Anniversary addons this code base grew out of (the repo
-  terin678/ic-addons); the client rules in it still apply.
+- Skill for addon work: `.claude/skills/wow-addon-dev/SKILL.md` and `client-api.md`.
 
 ## Git workflow
 
@@ -39,8 +37,8 @@ adding anything: this is built bottom-up, one layer at a time.
 
 1. `python scripts/lint.py`.
 2. `scripts/run-tests.ps1 -Flavor forever -Addon <Addon>`: the addon's cases under LuaJIT
-   against a stub client. A case that needs real widgets returns early on `IC_HEADLESS`.
-3. The same cases in game: `/keel test`, `/stickies test`, `/tuner test`.
+   against a stub client. A case that needs real widgets returns early on `KEEL_HEADLESS`.
+3. The same cases in game: `/keel test`, `/sticky test`, `/tuner test`.
 4. The `wow-ui-reviewer` agent on every UI file touched.
 
 Then deploy, restart or `/reload`, run the commands, check BugSack. Say plainly when

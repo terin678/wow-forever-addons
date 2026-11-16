@@ -3,8 +3,8 @@
   Link an addon from this repo into a WoW client's AddOns folder with a directory junction.
 
 .EXAMPLE
-  .\scripts\deploy.ps1 -Flavor anniversary -Addon MalexisAuctionWatcher
-  .\scripts\deploy.ps1 -Flavor anniversary -Addon MalexisAuctionWatcher -Copy   # copy instead of link
+  .\scripts\deploy.ps1 -Flavor forever -Addon RenderTuner
+  .\scripts\deploy.ps1 -Flavor forever -Addon RenderTuner -Copy   # copy instead of link
 #>
 param(
     [Parameter(Mandatory = $true)][string]$Flavor,

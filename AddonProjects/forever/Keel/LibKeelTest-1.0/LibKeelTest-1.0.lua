@@ -17,7 +17,7 @@ result = { passed, failed, failures = { { name, err }, ... } }
 
 A registry knows nothing about saved variables or windows. Model functions take their
 tables as arguments, so a case builds its own input and nothing has to be swapped out and
-restored around it. Lifted from LibICCore-1.0's harness, without its reach into ns.db.
+restored around it.
 ]]
 
 local MAJOR, MINOR = "LibKeelTest-1.0", 1

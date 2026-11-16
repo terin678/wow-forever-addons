@@ -7,7 +7,7 @@ local T = ns.Tests
 local Util = ns.Util
 
 --------------------------------------------------------------------------------
--- LibICUtil
+-- LibKeelUtil
 --------------------------------------------------------------------------------
 
 T.Case("Util.Trim: whitespace off both ends, the middle kept", function()
@@ -89,7 +89,7 @@ T.Case("Util.Move: one element reordered, the rest shifted", function()
 end)
 
 --------------------------------------------------------------------------------
--- LibICTest, run against a registry of its own
+-- LibKeelTest, run against a registry of its own
 --------------------------------------------------------------------------------
 
 T.Case("Test: a failing case is counted and named, a passing one is not", function()
@@ -124,7 +124,7 @@ T.Case("Test: True and Near say what they wanted", function()
 end)
 
 --------------------------------------------------------------------------------
--- LibICJSON
+-- LibKeelJSON
 --------------------------------------------------------------------------------
 
 local JSON = LibStub("LibKeelJSON-1.0")
@@ -250,7 +250,7 @@ T.Case("JSON: a table survives the trip out and back", function()
 end)
 
 --------------------------------------------------------------------------------
--- LibICEnv
+-- LibKeelEnv
 --------------------------------------------------------------------------------
 
 local Env = LibStub("LibKeelEnv-1.0")
@@ -389,7 +389,7 @@ T.Case("Env.Wrap: calls and time are counted, the function behaves as before", f
 end)
 
 --------------------------------------------------------------------------------
--- LibICRestrict
+-- LibKeelRestrict
 --------------------------------------------------------------------------------
 
 local Restrict = LibStub("LibKeelRestrict-1.0")
@@ -494,7 +494,7 @@ end
 
 T.Case("Restrict.Read: the client's answers, in the shape State takes", function()
     -- Headless only: in game, writing Enum and the C_ tables would taint them.
-    if not IC_HEADLESS then return end
+    if not KEEL_HEADLESS then return end
     local client, restore = FakeRestrictClient()
     local r = Restrict.Read()
     T.Eq(r.states.Combat, 0, "each kind by its name")
@@ -520,7 +520,7 @@ end)
 
 T.Case("Restrict.OnChange: told at each change, with the regen event first", function()
     -- Headless only: in game, writing Enum and the C_ tables would taint them.
-    if not IC_HEADLESS then return end
+    if not KEEL_HEADLESS then return end
     local client, restore = FakeRestrictClient()
     local seen = {}
     local stop = Restrict.OnChange(function(s, previous) seen[#seen + 1] = { s = s, previous = previous } end)
@@ -561,7 +561,7 @@ T.Case("Restrict.OnChange: told at each change, with the regen event first", fun
 end)
 
 --------------------------------------------------------------------------------
--- LibICGroup
+-- LibKeelGroup
 --------------------------------------------------------------------------------
 
 local Group = LibStub("LibKeelGroup-1.0")
@@ -685,7 +685,7 @@ end)
 
 T.Case("Group.Read: the units of a party or a raid, every call guarded", function()
     -- Headless only: in game, writing these globals would taint them.
-    if not IC_HEADLESS then return end
+    if not KEEL_HEADLESS then return end
     local names = { "IsInRaid", "IsInGroup", "GetNumGroupMembers", "UnitGUID", "UnitName", "UnitClass",
         "UnitGroupRolesAssigned", "GetPartyAssignment", "UnitIsGroupLeader", "UnitIsGroupAssistant",
         "UnitIsConnected", "UnitIsDeadOrGhost", "IsEveryoneAssistant" }
@@ -743,7 +743,7 @@ T.Case("Group.Read: the units of a party or a raid, every call guarded", functio
 end)
 
 --------------------------------------------------------------------------------
--- LibICChat
+-- LibKeelChat
 --------------------------------------------------------------------------------
 
 local Chat = LibStub("LibKeelChat-1.0")
@@ -849,7 +849,7 @@ end)
 
 T.Case("Chat.New: a sender holds a locked line and sends it when the lock lifts", function()
     -- Headless only: in game, writing these globals would taint them.
-    if not IC_HEADLESS then return end
+    if not KEEL_HEADLESS then return end
     local saved = { SendChatMessage = SendChatMessage, GetTime = GetTime, C_Timer = C_Timer }
     local savedNow, savedGroup = Restrict.Now, Group.Now
     local clock, said, timers = 100, {}, {}
@@ -903,7 +903,7 @@ T.Case("Chat.New: a sender holds a locked line and sends it when the lock lifts"
 end)
 
 --------------------------------------------------------------------------------
--- LibICComm
+-- LibKeelComm
 --------------------------------------------------------------------------------
 
 local Comm = LibStub("LibKeelComm-1.0")
@@ -960,7 +960,7 @@ end)
 
 T.Case("Comm.New: send, loop back, receive, hold through a lockdown", function()
     -- Headless only: in game, writing these globals would taint them.
-    if not IC_HEADLESS then return end
+    if not KEEL_HEADLESS then return end
     local saved = { C_ChatInfo = C_ChatInfo, GetTime = GetTime, C_Timer = C_Timer, UnitGUID = UnitGUID }
     local savedGroup = Group.Now
     local clock, wire, timers, result = 100, {}, {}, 0
@@ -1035,7 +1035,7 @@ T.Case("Comm.New: send, loop back, receive, hold through a lockdown", function()
 end)
 
 --------------------------------------------------------------------------------
--- LibICStore
+-- LibKeelStore
 --------------------------------------------------------------------------------
 
 local Store = LibStub("LibKeelStore-1.0")
@@ -1122,7 +1122,7 @@ T.Case("Store.Register: the kit's own tables arrived through it", function()
 end)
 
 --------------------------------------------------------------------------------
--- LibICConsole
+-- LibKeelConsole
 --------------------------------------------------------------------------------
 
 local Console = LibStub("LibKeelConsole-1.0")
@@ -1182,7 +1182,7 @@ T.Case("Console.Dispatcher: a known word runs its command, anything else prints 
 end)
 
 --------------------------------------------------------------------------------
--- LibICTheme
+-- LibKeelTheme
 --------------------------------------------------------------------------------
 
 local Theme = LibStub("LibKeelTheme-1.0")
@@ -1261,7 +1261,7 @@ T.Case("Kit: a theme is saved only when it was chosen", function()
 end)
 
 --------------------------------------------------------------------------------
--- LibICWidgets
+-- LibKeelWidgets
 --------------------------------------------------------------------------------
 
 local W = LibStub("LibKeelWidgets-1.0")
@@ -1519,7 +1519,7 @@ T.Case("Widgets: a minimap button's place is an angle round the rim", function()
 end)
 
 -- In game these would put a button on the player's minimap every time the cases ran.
-if IC_HEADLESS then
+if KEEL_HEADLESS then
     T.Case("Widgets: a minimap button keeps its angle and reports a click and a move", function()
         local clicked, moved
         local b = W.MinimapButton({
@@ -1747,7 +1747,7 @@ T.Case("Widgets: a resize grip follows the pointer inside its bounds", function(
     w = W.ResizeSize(400, 300, 10.4, 0)
     T.Eq(w, 410, "whole pixels, with no bounds given")
 
-    if not IC_HEADLESS then return end
+    if not KEEL_HEADLESS then return end
     local savedCursor = GetCursorPosition
     local cx, cy = 500, 500
     _G.GetCursorPosition = function() return cx, cy end
@@ -1835,7 +1835,7 @@ T.Case("Widgets: a raid icon from a plain number, hidden for anything else", fun
 end)
 
 --------------------------------------------------------------------------------
--- LibICSecure
+-- LibKeelSecure
 --------------------------------------------------------------------------------
 
 local Secure = LibStub("LibKeelSecure-1.0")
@@ -1876,7 +1876,7 @@ T.Case("Secure.Words and ClickBinding", function()
     T.Eq(words.exact, "/targetexact", "target exact")
     T.Eq(words.click, "/click", "click")
     T.Eq(words.clearWorld, "/cwm", "clear world marker")
-    if IC_HEADLESS then
+    if KEEL_HEADLESS then
         _G.SLASH_TARGET_MARKER1 = "/marque"
         T.Eq(Secure.Words().mark, "/marque", "the client's own word when it has one")
         _G.SLASH_TARGET_MARKER1 = "not a word"
@@ -1890,7 +1890,7 @@ end)
 
 T.Case("Secure buttons: made out of combat, changes held through it", function()
     -- Headless only: in game, writing these globals would taint them.
-    if not IC_HEADLESS then return end
+    if not KEEL_HEADLESS then return end
     local saved = {
         CreateFrame = CreateFrame,
         SetOverrideBindingClick = SetOverrideBindingClick,
@@ -2004,7 +2004,7 @@ end)
 
 T.Case("Gallery: builds every widget, and toggles", function()
     -- Headless only: in game this would open the gallery in the middle of /keel test.
-    if not IC_HEADLESS then return end
+    if not KEEL_HEADLESS then return end
     T.Eq(ns.Gallery.Toggle(), true, "the first call builds it and shows it")
     T.Eq(ns.Gallery.Toggle(), false, "the next hides it")
 end)

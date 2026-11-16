@@ -97,7 +97,7 @@ local function CopyColor(c)
 end
 
 function Theme.Register(name, def)
-    assert(type(name) == "string" and name ~= "", "LibICTheme: a theme needs a name")
+    assert(type(name) == "string" and name ~= "", "LibKeelTheme: a theme needs a name")
     def = def or {}
     local theme = { name = name, label = def.label or name, colors = {}, fonts = {} }
     -- A theme with a mark of its own names its texture; the rest have none.

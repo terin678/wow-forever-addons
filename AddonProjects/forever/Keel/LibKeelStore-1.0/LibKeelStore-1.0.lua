@@ -27,7 +27,7 @@ info = { sawFile, firstRun, migrated, lost }
 
 The store prints nothing. An addon that cares about `lost` says so itself, in its own
 voice. It owns one event frame for every addon that registers, and that frame is the
-only one this layer creates. Lifted from LibICCore-1.0's bootstrap and load check.
+only one this layer creates.
 ]]
 
 local MAJOR, MINOR = "LibKeelStore-1.0", 1
@@ -137,7 +137,7 @@ end
 -- once, when its saved variables are in hand.
 function Store.Register(addonName, spec)
     assert(type(addonName) == "string" and type(spec) == "table" and type(spec.account) == "string",
-        "LibICStore: Register needs the addon's name and a spec naming its account table")
+        "LibKeelStore: Register needs the addon's name and a spec naming its account table")
     Store.registered[addonName] = spec
     if not frame then
         frame = CreateFrame("Frame")

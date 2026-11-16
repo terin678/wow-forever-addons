@@ -1,188 +1,86 @@
-# Client API contracts that have already cost us
+# Client contracts that have already cost us
 
-Every entry here is something that shipped broken, was found in game or in review, and is
-not obvious from the code. The symptom is written down first, because the symptom is what
-you will have in front of you.
+Things that are not obvious from the code, symptom first, because the symptom is what you
+will have in front of you. Client: WoW Forever, interface 16001. The full record of what
+this client has been proven to do is `Docs/client-reference.md`; this file is the short
+list of traps.
 
-Client: TBC Anniversary, interface 20506. Retail documentation is often wrong for it.
+## Confirmed on this client
 
-## Drawing
+**A setting "took" and nothing changed.** `C_CVar.SetCVar` does not raise and does not
+return false when the client refuses a value; a checked variable keeps its last good value.
+Reading the variable back is the only way to tell.
 
-**Every frame draws with no fill at all, text and icons still visible.** The backdrop's
-`bgFile` does not resolve. `Interface\Buttons\WHITE8x8` (capitals) exists on this client;
-`Interface\Buildings\White8x8` does not. A missing texture is silent: no error, no
-placeholder, just nothing.
+**A console variable compares unequal to the number just written.** Values come back as
+text and not always as one number: `MSAAQuality` reads `"3"` or `"3,0"`, `RenderScale`
+reads `"0.670000"`. Compare as numbers.
 
-**A scrollbar lands outside the window, or over the next table.**
-`UIPanelScrollFrameTemplate` draws its scrollbar just beyond the scroll frame's own width.
-The frame must be exactly as wide as its rows, and the caller leaves 26px to its right.
+**"Is this Classic" says no.** `WOW_PROJECT_ID` is 1, the mainline value. Branch on the
+interface number or on whether an API exists, never on the project id.
+
+**A "Name-Realm" key is wrong for every character.** `UnitName("player")` returns the
+character's two names, not a name and a realm. Use the per-character saved table, or
+`UnitGUID` when a key is needed.
+
+**A global that every old addon calls is nil.** `GetAddOnMetadata`, `GetItemInfo`,
+`EasyMenu` and `InterfaceOptions_AddCategory` are absent; the `C_` forms, `MenuUtil` and
+`Settings` are what exist.
+
+**`SetBackdrop` is nil.** A frame made without `BackdropTemplate` has none. Draw fills and
+edges with `Texture:SetColorTexture`, as LibKeelWidgets does, and a widget needs no
+template at all.
+
+**Attributes cannot be touched in combat.** `SetAttribute` on a secure button raises
+`ADDON_ACTION_BLOCKED` once `InCombatLockdown()` is true. LibKeelSecure holds every change
+until combat ends; a pooled secure row must be disabled rather than left pointing at
+someone else's action.
+
+**A value read in combat is not what it seems.** The client hides some values in combat, in
+an encounter or under a chat lock (`issecretvalue`). Read them through LibKeelRestrict, and
+treat a hidden value as "not known", never as "no".
+
+**Data vanished after a `.toc` edit.** `.toc` files are read once, at client start. A
+client that has been running across `.toc` edits can hand back an empty account table while
+the per-character one loads. The store reports it as `info.lost`. Restart the client.
+
+## Carried over from an earlier client
+
+These were learned on a different client and have not been re-checked on 16001. They are
+about how frames work and are likely to hold, but confirm before relying on one.
+
+**A frame draws with no fill, text still visible.** A texture path that does not resolve is
+silent: no error, no placeholder. `Interface\Buttons\WHITE8x8` existed;
+`Interface\Buildings\White8x8` did not, and `scripts/lint.py` still fails on it.
 
 **A frame reports `GetWidth()` of 0.** A frame anchored on two sides has no size until the
 first layout pass. Anything computing geometry at build time needs a fallback width.
 
 **A FontString ignores `SetScript`.** FontStrings are regions, not frames: no scripts, no
-mouse. A hover or clickable cell needs an invisible Button on top of it (`col.hit` in
-LibICUI's `Table` does this).
+mouse. A hover or clickable cell needs an invisible Button on top of it.
 
 **`Button:SetText` does nothing.** A bare Button has no font string until
-`SetFontString(fs)` is called. LibICUI's `Button` does it; a hand-rolled one must too.
+`SetFontString(fs)` is called.
 
-**A rotated texture comes out unrotated.** `Texture:SetRotation` turns the picture
-*inside* a rectangle that does not move, so a `SetColorTexture` fill looks identical at
-every angle. There is no polyline primitive either. To draw a sloped line you need artwork
-that is already sloped plus the 8-argument `SetTexCoord`; to draw a chart line without art,
-use steps — a flat run per slot and an upright joining one run to the next, all
-axis-aligned. MAW's `Chart.lua` does the latter.
+**A rotated texture comes out unrotated.** `Texture:SetRotation` turns the picture inside a
+rectangle that does not move, so a `SetColorTexture` fill looks identical at every angle.
+Draw a chart line as steps: a flat run per slot and an upright joining one run to the next.
 
-## Items and links
-
-**A guard that reads an item's class silently fails for a stranger's link.**
-`GetItemInfo(id)` returns *nothing at all* for an item this client has never cached, so
-`select(12, GetItemInfo(id))` is nil and every test on it is false. That is exactly the
-case a link from a stranger falls into. Never let "we could not identify it" mean "it is
-not interesting".
-
-**A linked recipe has no item id.** Shift-clicking a recipe out of a profession window
-posts `|Htrade:3811:1:300:2:0|h[Leatherworking: Bindings of Lightning Reflexes]|h`. There
-is no `|Hitem:` in it. Link types seen in chat: `|Hitem:` items, `|Htrade:` recipes,
-`|Henchant:` enchants, `|Hspell:` spells, `|Hquest:` quests. The one thing they share is
-`[Display Name]` in brackets, which is why `Util.BracketNames` reads brackets rather than
-hunting for a particular link type.
-
-**`GetCoinTextureString` errors on anything but a whole positive number.** It refuses
-negatives (a correction), and money is fractional whenever it came from a division. Round
-and take the absolute value before calling it, and put the sign back yourself.
-
-## The profession window
-
-**A recipe is missing from the list even though the player knows it.**
-`GetNumTradeSkills()` counts only the children of *expanded* headers. A recipe under a
-collapsed category is absent, not filtered. `ExpandTradeSkillSubClass(0)` opens them all.
-
-**Return positions**: `GetTradeSkillInfo(i)` is
-`skillName, skillType, numAvailable, isExpanded, altVerb, numSkillUps`. `skillType` is
-`"header"` for a category row. `GetTradeSkillItemLink(i)` is the product's link,
-`GetTradeSkillNumMade(i)` is `minMade, maxMade`.
-
-**Selecting a recipe does not scroll to it.** `TradeSkillFrame_SetSelection(i)` updates the
-detail pane and leaves the list where it was. The list is a faux scroll frame: set
-`FauxScrollFrame_SetOffset` *and* the scrollbar's value, which is what redraws it.
-
-**The create count box** is the global `TradeSkillInputBox`. Confirmed present on 20506:
-`/run print(TradeSkillInputBox, TradeSkillInputBox:GetNumber())` answers with the frame and
-the number between the arrows. Do not overwrite it while it has focus; the player may be
-typing in it.
-
-**Two different links, and only one lists reagents.** `GetTradeSkillItemLink(i)` is the
-*product* (`|Hitem:`). `GetTradeSkillRecipeLink(i)` is the *craft* (`|Htrade:`), and that is
-the one whose tooltip lists the reagents — which is what makes it worth handing to a
-customer. Nothing here called it before TradeMaster 1.9.0, so treat nil as expected and
-guard it; `/tm probe` reports whether this client has it.
-
-## Secure frames and combat
-
-**Attributes cannot be touched in combat.** `SetAttribute` and `RegisterForClicks` on a
-secure button are blocked once `InCombatLockdown()` is true. A pooled row therefore keeps
-the *previous* item's attributes: disable the button rather than leave it pointing at
-someone else's action. Creating frames in combat is fine; only the secure calls are not.
-
-## Units and the raid roster
-
-**"Unknown unit." in red across the screen, and no Lua error anywhere.**
-`CheckInteractDistance(unit, i)` on a unit that is not in the world (a raid member still in
-Shattrath, or offline) puts `Unknown unit.` on `UIErrorsFrame`. That is a UI error, not a
-Lua one, so a `pcall` around the call catches nothing. Check
-`UnitExists(unit) and UnitIsVisible(unit)` first. MarkedForDeath's inspect pump printed it
-on every pass before a raid was summoned, until 1.25.2.
-
-**A tank with a shield on every raid frame is not a tank to `GetPartyAssignment`.** A raid
-marks a tank two ways that do not overlap: Set Main Tank, read by
-`GetPartyAssignment("MAINTANK", unit)`, and the tank role icon, read by
-`UnitGroupRolesAssigned(unit) == "TANK"`, which is live on 20506. ElvUI draws the same
-shield for either, so reading only one misses tanks the raid believes it has marked.
-MarkedForDeath read Main Tank alone and called no tank death in a raid until 1.27.2.
-
-## The combat log
-
-**The log file lags the game by minutes.** `WoWCombatLog-*.txt` is written through a buffer,
-so its last line and modified time can sit two or three minutes behind while logging works
-fine, and a `/reload` flushes it. Silence in the file is not evidence that logging stopped.
-A `COMBAT_LOG_VERSION` line marks every switch-on and every reload, and a `ZONE_CHANGE` to an
-outdoor zone just before a gap means the player left the instance.
-
-## Chat
-
-**A public channel message needs a hardware event.** `SendChatMessage` to `CHANNEL` or `SAY`
-only works from a keypress or click, which is why barking arms a state and a button sends
-it. Whispers have no such restriction.
-
-## Saved variables
-
-**Data that "disappeared" on reload was usually never saved.** A field on a Lua table that
-is not inside the saved-variables table is session state, and a filter or toggle kept there
-looks exactly like data loss the next time the player logs in. If it changes what the
-player sees, it belongs in the saved table.
+**A font string with a set width wraps**, and in a fixed-height row draws over the row
+below. `SetWordWrap(false)`.
 
 **A channel list has a stride of three.** `GetChannelList()` returns a flat
-`id, name, disabled, id, name, disabled, ...`. Walking it two at a time reads every other
-channel's name as an id, and the bug is invisible until the character has joined an odd
-number of channels. `TradeMaster/Barker.lua` and `GuildRecruitment/Bark.lua` both step by 3.
-
-## Addon messages and the guild roster
-
-Answered by `/gr probe` on 20506, so these are facts now rather than guesses.
-
-**`C_ChatInfo` is the live path; the bare globals are gone.**
-`C_ChatInfo.SendAddonMessage` and `C_ChatInfo.RegisterAddonMessagePrefix` both exist;
-`SendAddonMessage` and `RegisterAddonMessagePrefix` as globals do **not**. Registration is
-accepted. Resolve the namespaced name first and keep the global only as a fallback for
-other flavours.
-
-**`GuildRoster()` does not exist either**, under that name. `IsInGuild`,
-`GetNumGuildMembers`, `GetGuildRosterInfo` and `GetGuildInfo` all do, and the roster is
-populated without anyone asking for it -- a probe that never called a refresh still read
-450 rows. `GuildRecruitment/Roster.lua` tries `C_GuildInfo.GuildRoster` and falls back to
-reading whatever is already there, because a refresh you cannot request is not a reason to
-have no roster.
-
-**A GUILD addon message comes back to the sender.** `/gr probe`'s loopback reported
-"heard from Malexis in 0.00s" -- your own message is delivered to your own
-`CHAT_MSG_ADDON` immediately. Useful, because it is what makes a loopback test possible at
-all, but anything that walks the receive path has to drop its own traffic early or it files
-itself as a peer, counts its own echo as received, and logs itself agreeing with itself.
-`GuildRecruitment/Comm.lua` returns as soon as the loopback has been told.
-
-**`GetGuildRosterInfo` returns a 0-based rankIndex** with 0 as the guild master, as
-assumed: a rank-2 officer reads as 2.
-
-**`loadstring` exists.** ICTemplate's gallery compiles each demo from the same string it
-displays, and that rests on it.
+`id, name, disabled, id, name, disabled, ...`.
 
 ## Lua, not the client
 
 **luaparser does not catch an unfinished string.** A raw newline inside `"..."` is a load
-error in the client -- "unfinished string near" -- and `luaparser` parses it happily, so
-`scripts/lint.py`'s parse check called the file clean and it shipped. There is now a
-`check_unfinished_strings` in lint.py that walks the source properly, skipping long strings
-and comments. The lesson generalises: the parse check is a floor, not a ceiling.
+error in the client and `luaparser` parses it happily. `check_unfinished_strings` in
+`scripts/lint.py` walks the source properly. The parse check is a floor, not a ceiling.
 
-**A table constructor cannot carry a nil.** `{ channel = nil }` is an *empty* table, so a
-test helper that merges an overrides table silently applies no override and the field keeps
-its default. This passed a Python port of the same cases -- a dict really can hold a `None`
--- and failed the first time it ran in the client. Clear the field on the built table
-instead: `local s = state(); s.channel = nil`.
+**A table constructor cannot carry a nil.** `{ channel = nil }` is an empty table, so a
+test helper that merges an overrides table silently applies no override. Clear the field on
+the built table instead: `local s = state(); s.channel = nil`.
 
-## The trade window
-
-**`GetTradeTargetItemLink(slot)` and `GetTradeTargetItemInfo(slot)` read what the other
-side has put in**, slots 1 to 6; slot 7 is the "will not be traded" slot and is deliberately
-excluded. The count is the **third** return of `GetTradeTargetItemInfo`; the item id comes
-off the link. `GetTradePlayerItemLink/Info` are our side. `GetTargetTradeMoney()` and
-`GetPlayerTradeMoney()` are the money, in copper.
-
-**`TRADE_TARGET_ITEM_CHANGED(slot)` fires on every slot the other side touches**, and
-`TRADE_UPDATE` on any change; either is the moment to re-read the window. `TRADE_ACCEPT_UPDATE`
-carries `playerAccepted, targetAccepted` as 0/1, and the trade has gone through only when
-`TRADE_CLOSED` follows a snapshot taken with both at 1. `TradeFrame` is the Blizzard frame
-and a panel can anchor to its `TOPRIGHT`. TradeMaster's `Trade.lua` is the working reference.
-
+**Data that "disappeared" on reload was usually never saved.** A field on a Lua table that
+is not inside the saved table is session state, and a filter or toggle kept there looks
+exactly like data loss at the next login. If it changes what the player sees, save it.

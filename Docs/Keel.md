@@ -16,8 +16,7 @@ theme picked with `/ickit theme` was saved under the old name and has to be pick
 with `/keel theme`; nothing else was stored there that matters.
 
 It is built bottom-up, one layer at a time. [forever/VISION.md](forever/VISION.md) has the
-rules and the order. It is a different code base from ICLibs (in [ic-addons](https://github.com/terin678/ic-addons)), which serves the
-TBC Anniversary addons, and the two are never installed on the same client.
+rules and the order.
 
 ## Install
 
@@ -89,7 +88,7 @@ should not. The counters cost two clock reads a call and need no console variabl
 | LibKeelSecure-1.0 | 1 | Secure buttons the player presses, for what addon Lua may not do (raid marks): macro and clear-all buttons, override key bindings, every change held until combat ends; the pure macro fitter |
 
 The libraries never print. An addon decides what to say, in its own voice. Only
-LibICWidgets and LibICSecure create frames, apart from the one event frame each of the
+LibKeelWidgets and LibKeelSecure create frames, apart from the one event frame each of the
 store and the restriction listener keeps.
 
 The MINOR goes up whenever a library's API changes. Bump it in the library source and in
@@ -113,8 +112,7 @@ local Util = LibStub("LibKeelUtil-1.0")
 | `Util.Clamp(n, lo, hi)` | `n` held inside `lo..hi`; a value that is not a number comes back as `lo`. |
 | `Util.Move(list, from, to)` | Moves one element of a list and returns whether anything moved. |
 
-Trim through DeepCopy are lifted from LibICCore-1.0, with one change: `SortedKeys` orders
-numeric keys by value, where the original compared them as text and put 10 before 2.
+`SortedKeys` orders numeric keys by value, so 2 comes before 10.
 
 ## LibKeelTest-1.0
 
@@ -330,7 +328,7 @@ or assist; INSTANCE_CHAT an instance group; SAY and YELL a key press (from a tim
 the probe saw SAY sent but never arrive). Over budget a line is held (when it may be) or
 refused; the default is 2 raid warnings and 4 lines on any other channel per 10 seconds.
 
-The sender reads the chat lock from LibICRestrict, the group from LibICGroup, the instance
+The sender reads the chat lock from LibKeelRestrict, the group from LibKeelGroup, the instance
 type from `GetInstanceInfo`, and sends with `SendChatMessage`. Whether an instance locks
 chat during trash, a boss or not at all is not known yet; `instance = "locked"` is the
 setting for a client found to lock without saying so.
@@ -339,14 +337,14 @@ setting for a client found to lock without saying so.
 
 ```lua
 local Comm = LibStub("LibKeelComm-1.0")
-local comm = Comm.New("MarkedForDeath", { version = VERSION, onDrop = function(entry, reason) end })
+local comm = Comm.New("MyAddon", { version = VERSION, onDrop = function(entry, reason) end })
 
 comm:On("plan", function(msg, from, channel) ApplyPlan(msg.plan) end)
 comm:Send({ t = "plan", plan = plan })      -- to the whole group
 comm:Hello()                                -- peers answer with their versions
 ```
 
-A message is a table with a type in `t`. It goes out as compact JSON (LibICJSON), cut into
+A message is a table with a type in `t`. It goes out as compact JSON (LibKeelJSON), cut into
 frames that fit one addon message, and arrives whole on every other client in the group.
 `Send` adds `f`, the player's guid; the copy the client loops back to you carries your own
 guid and is dropped, so a handler only ever sees other players.
@@ -547,7 +545,7 @@ What it is built around:
 - Creating a button, setting an attribute and binding a key happen out of combat only.
   The probe saw attributes set in combat raise `ADDON_ACTION_BLOCKED`.
 - Nothing reads marks back. In combat `GetRaidTargetIndex` on a marked mob is secret, so a
-  caller keeps its own record of what it pressed (MarkedForDeath's press record).
+  caller keeps its own record of what it pressed.
 - A mouse click puts the pointer on the button, so `[@mouseover]` there means the button.
   A button meant for `[@mouseover]` is bound to a key and made `hidden`.
 - Keep the macro text to what the probe ran: `/tm` with a target, `/targetexact` then

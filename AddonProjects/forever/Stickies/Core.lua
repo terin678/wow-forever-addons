@@ -6,10 +6,10 @@ to this character or to every character on the account.
 
 It is the first addon built on Keel, and it uses each layer for what that layer is for:
 
-    Notes.lua   the model: pure functions over the two saved tables     (LibICUtil)
-    UI.lua      one small panel per note, drawn from what Notes says    (LibICWidgets, LibICTheme)
-    Core.lua    this file: saved tables, commands, the two events       (LibICStore, LibICConsole, LibICEnv)
-    Tests.lua   the cases                                               (LibICTest)
+    Notes.lua   the model: pure functions over the two saved tables     (LibKeelUtil)
+    UI.lua      one small panel per note, drawn from what Notes says    (LibKeelWidgets, LibKeelTheme)
+    Core.lua    this file: saved tables, commands, the two events       (LibKeelStore, LibKeelConsole, LibKeelEnv)
+    Tests.lua   the cases                                               (LibKeelTest)
 
 Nothing here runs while the game is idle: the addon acts on a click, a key, a command,
 login, and the start of combat (to give the keyboard back).

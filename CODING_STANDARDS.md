@@ -1,29 +1,31 @@
 # Coding standards
 
-These apply to every addon in this repo. They exist so that anyone in the guild can open
-any addon here and find the same shape.
+These apply to every addon in this repo, so that anyone can open any addon here and find
+the same shape. They are written for WoW Forever (interface 16001) and for addons built on
+the library addon Keel. `Docs/forever/VISION.md` says why the code is layered as it is;
+`Docs/Keel.md` documents every library named below.
 
 ## Layout of an addon
 
 ```
 AddonName/
-  AddonName.toc        Interface, Title, Notes, Version, IconTexture, Group, Category,
-                       Dependencies, SavedVariables, OptionalDeps, file list
+  AddonName.toc        Interface, Title, Notes, Author, Version, IconTexture, Category,
+                       SavedVariables, Dependencies, then the file list
   Bindings.xml         Key bindings, if any. Shipped but NEVER listed in the .toc
-  Core.lua             Version, defaults, migrations, this addon's own commands and
-                       events, and the Core:Attach call that installs the rest
-  Util.lua             This addon's own pure helpers, if it has any; the shared ones
-                       come from LibICCore
-  <Feature>.lua        One file per concern (Database, Scanning, ...)
-  UI.lua, UI_*.lua     The window shell and one file per page
+  Core.lua             Version, the saved tables, this addon's commands and events
+  <Model>.lua          The logic: pure functions over tables (Notes.lua, Model.lua)
+  <Client>.lua         The one file that calls the client, where there is much of it
+                       (RenderTuner's Apply.lua)
+  UI.lua, Panel.lua    Frames, drawn from what the model says
   Tests.lua            Loaded last, so every module exists when its cases register
 ```
 
 - The `.toc` file list is load order. Data and logic files load before UI files.
-- A decision that has a side effect is two functions: one that decides and returns a
-  plan, pure, and one that performs it. `TradeMaster/Events.lua` is the shape: `Decide`
-  is what the tests and `/tm try` read, `Act` is the only place chat, invites and the
-  saved tables are touched, and the per-channel rules are one table.
+- **Pure logic is separate from frames.** A model function takes its tables as arguments and
+  returns a result, so it has a headless case. Frames only draw what the model says.
+- A decision that has a side effect is two functions: one that decides and returns a plan,
+  pure, and one that performs it. `LibKeelChat-1.0` is the shape: `Chat.Decide` is what the
+  cases read, and the sender is the only place a line is sent.
 - `Bindings.xml` is loaded by the client by filename. Listing it in the `.toc` loads every
   binding twice; `scripts/lint.py` fails on it.
 - An addon names its own heading in the AddOns list with `## Category:`, by what it is for
@@ -31,35 +33,30 @@ AddonName/
   None of them uses `## Group:`, which nests an addon under another; its value has to be an
   addon that exists, and a made-up name silently ungroups everything using it.
   `Docs/client-reference.md` has the whole model.
+- Nothing an addon shows a player carries a person's, a guild's or a server's name or mark.
+  Names are for what a thing does.
 - Only the addon folder ships. No README, screenshots, or scripts inside it.
 - **No globals.** Every file starts with `local addonName, ns = ...` and hangs what it
   exports off `ns`, which the client gives each addon privately. A module claims its own
-  table idempotently: `ns.Log = ns.Log or {}` then `local Log = ns.Log`. The only
+  table idempotently: `ns.Model = ns.Model or {}` then `local Model = ns.Model`. The only
   intentional globals are the saved-variable tables named in the `.toc`, frames that must
   be named for `UISpecialFrames` or a template, and the `BINDING_*` strings and functions
   `Bindings.xml` calls by name.
-- The plumbing every addon shares -- Print, the saved-variable bootstrap and its load
-  check, Util, Log, the test harness, the slash dispatcher, the minimap launcher -- is
-  `LibICCore-1.0` in ICLibs, installed by one `Core:Attach(ns, {...})` call in
-  `Core.lua` under the names above (`ns.Print`, `ns.Util`, `ns.Log`, `ns.Tests`). An
-  addon carries none of it itself, and `scripts/lint.py` fails an addon with saved
-  variables that does not attach. `Docs/ICLibs.md` lists what Attach installs.
-- `ICTemplate` is the worked example of all of this, and copying it (or running
-  `scripts/new-addon.ps1`) is how a new addon starts.
-
-Two addons do not follow this, both deliberately. MalexisAuctionWatcher predates the private
-namespace and still uses a single `_G` table with colon methods; LibICCore attaches to that
-table just the same, so its plumbing is shared, but the shape is the old one and it is not
-to be copied into anything new. AuctionatorSellingTweaks is a single-file hook with
-nothing to export, so it declares `local addonName` outright and has no `ns` at all. Every
-other addon here takes the two return values.
+- The plumbing every addon shares comes from Keel, fetched with LibStub at the top of
+  `Core.lua`: `LibKeelStore-1.0` boots the saved tables, `LibKeelConsole-1.0` prints and
+  dispatches slash commands, `LibKeelTest-1.0` runs the cases, `LibKeelEnv-1.0` wraps
+  handlers so their cost can be seen, `LibKeelUtil-1.0` holds the pure helpers. An addon
+  carries none of that itself. `Stickies/Core.lua` is the worked example of an addon, and
+  `Keel/Gallery.lua` of a window.
+- Layers depend downward only. A library never knows which addon is using it, and a library
+  is added to Keel when an addon needs it and not before.
 
 ## Lua style
 
 - Four-space indentation. No tabs.
 - `local` everything that is not deliberately exported. Cache library functions you call in
   hot paths at file scope.
-- Functions on a namespace table use dot syntax: `function Log.Push(list, entry)`.
+- Functions on a namespace table use dot syntax: `function Model.Plan(target, live)`.
   Colon syntax is for things with a `self` worth having: a mixin, or a widget's own
   method. Pure helpers that nothing outside the file calls are `local function`.
 - Name booleans as questions (`isScanning`, `hasData`), tables as plural nouns, constants
@@ -74,95 +71,112 @@ other addon here takes the two return values.
 
 ## Client API rules
 
-- Target one interface version per flavor and put it in the `.toc`. Check the version
-  against an installed, up-to-date addon on that client rather than guessing.
+- **No client API is used until it is confirmed on this client**, by the in-game probe
+  (`/keel probe`, `/tuner probe`) or by the exported interface source. What is confirmed
+  is written to `Docs/client-reference.md`.
+- **Modern first.** Where the client has a current mechanism and a legacy one, use the
+  current one: the Addon Compartment, `MenuUtil`, the Settings panel, the `C_` namespaces.
+- Ask the client through `Env.Try` when a call may not be supported, and through
+  `LibKeelRestrict-1.0` for anything combat, an encounter or a chat lock can switch off or
+  hide. A value the client hides is nil, and nil means "not known", never "no".
+- Target one interface version and put it in the `.toc`. Check the number against an
+  installed, up-to-date addon on that client rather than guessing.
 - Guard every optional dependency: check the global exists and the function is a function
   before calling, and wrap unsupported internal APIs in `pcall`.
-- Anything that waits on the client (auction queries, item info, bank contents) is a state
-  machine with a timeout on every wait. Never loop on a condition that the client might
-  never satisfy. Every stuck state must have a way out that does not need `/reload`.
-- Use `C_Timer.After` for delays, never busy-wait in `OnUpdate`. Throttle `OnUpdate`
-  handlers with an accumulator.
+- Anything that waits on the client is a state machine with a timeout on every wait. Never
+  loop on a condition that the client might never satisfy. Every stuck state must have a
+  way out that does not need `/reload`.
+- **Idle means zero work.** No `OnUpdate` when idle and no polling. Use `C_Timer.After`
+  for delays. Wrap every event handler and slash command with `Env.Wrap` where it is
+  registered, so `/keel profile` shows what it costs.
 - Frame pools over frame churn: reuse widgets on refresh, hide extras.
 
 ## Saved variables
 
 - One account-wide table and, if needed, one per-character table, declared in the `.toc`
-  and named to `Core:Attach` as `db` and `cdb`.
-- Every field has a default in the `Defaults` table in `Core.lua`. `ApplyDefaults` fills
-  in what is missing on every load, so a new field needs no migration of its own.
-- A change that has to read the old shape is a step in `Migrations`, keyed by the schema
-  it upgrades from, and `SCHEMA` goes up with it. Steps run before the defaults and never
+  and handed to `Store.Register` at file scope in `Core.lua` as `account` and `character`.
+  The addon reads them as `ns.db` and `ns.cdb` from `onReady` onward.
+- Every field has a default in the `defaults` table given to `Store.Register`. Defaults are
+  filled in on every load and keep what is there, a stored `false` included, so a new
+  field needs no migration of its own.
+- A change that has to read the old shape is a step in `migrations`, keyed by the schema it
+  upgrades from, and `schema` goes up with it. Steps run before the defaults and never
   delete user data.
-- The library logs at load whether the client handed the saved variables back.
-  Editing a `.toc` needs a client restart. `/reload` does not re-read it, and a client that has been running across `.toc` edits can stop restoring one addon's account-wide saved variables while still restoring the per-character ones. The fingerprint is `/x log` saying `SAVED VARIABLES WERE EMPTY` with the per-character table intact. Restart the client before reading a line of addon code.
-- Store timestamps as `time()` integers, money as copper integers, day buckets as
-  `floor(time() / 86400)`.
+- `onReady` is handed `info`. When `info.lost` is true the account file came back empty
+  although this character has run the addon before: say so in red at login and tell the
+  player to restart before logging out, because a logout writes the empty table over the
+  file. `scripts/lint.py` fails an addon that declares saved variables and does not boot
+  them through the store.
+- Editing a `.toc` needs a client restart. `/reload` does not re-read it, and a client that
+  has been running across `.toc` edits is exactly what produces `info.lost`. Restart the
+  client before reading a line of addon code.
+- Store timestamps as `time()` integers and day buckets as `floor(time() / 86400)`. Store a
+  frame's place as fractions of the screen (`W.GetPlace`), not pixels.
 
 ## User-facing text
 
-- Chat output goes through `ns.Print`, which prefixes the addon name and honours
-  `/<cmd> out`. Errors also go to `UIErrorsFrame`.
+- Chat output goes through the addon's `out` from `Console.New`, which prefixes the addon
+  name: `out.Print`, `out.Printf`, and `out.Debug` for maintainer lines. The libraries
+  never print; an addon decides what to say, in its own voice.
 - Every slash command is a row in the `HELP` table in `Core.lua`, which is what
-  `/<cmd> help` prints, and a function in `COMMANDS`. The dispatcher's built-ins --
-  help, log, probe, status, test, enable, disable, out, reset, scale, version -- come
-  free, and a key in `COMMANDS` overrides one.
-- Anything that can silently do nothing (a source with no data, an item not cached) prints
-  a reason.
-- Colors: green for good/cheap, red for bad/expensive, amber for external or derived
-  values, grey for missing. Use the same meaning across the whole addon.
+  `/<cmd> help` prints, and a function in `COMMANDS`; both go to `Console.Slash`. The bare
+  command is the `""` entry, and a word with no entry prints the help.
+- Anything that can silently do nothing (a setting the client refused, a value it hid)
+  prints a reason.
+- Colours in a window come from the theme by role, never as literal numbers: `good`,
+  `warn` and `bad` for status text, `accent`, `textDim` and the rest as listed in
+  `Docs/Keel.md`. Use one meaning per role across the whole addon. `Theme.Hex(color)`
+  turns a role's colour into a code for inline text.
+- Every label, tooltip and chat line is checked on all the themes that ship: a colour that
+  reads on the dark default can vanish on Paper.
 
 ## Window layout
 
-- Every list has a column header row, in a frame **above** the ScrollFrame, never inside the
-  scroll child, so headers stay put while rows scroll. A compact always-on HUD panel may use
-  section rows instead, as long as its rows are still fixed height and single line.
-- List rows are fixed height and single line. Cells use `SetWordWrap(false)` (plus
-  `SetMaxLines(1)` where it exists) and truncate; the full text goes in a hover tooltip or a
-  detail panel. Never let a row's text decide the row's height, and never measure wrapped
-  text to lay out a list.
+- Build windows from `LibKeelWidgets-1.0`: panel, label, button, check box, edit box,
+  slider, choice, tabs, list, scroll, menu, confirm. Do not hand-roll a control or paint
+  one with literal colour values; every widget repaints when the theme changes.
+- Every list has a column header row, in a frame **above** the scroll, never inside the
+  scrolled content, so headers stay put while rows scroll. `W.List` does this by
+  construction. A compact always-on panel may use section rows instead, as long as its
+  rows are still fixed height and single line.
+- List rows are fixed height and single line. Cells truncate; the full text goes in a hover
+  tooltip or a detail panel. Never let a row's text decide the row's height, and never
+  measure wrapped text to lay out a list.
 - Toolbars (add, search, sort, filters, bulk actions) sit in a row above the headers.
-  Nothing is anchored over the scroll area: no bottom-anchored control sharing space with a
-  list. Legends go in the toolbar or a header tooltip. A footer strip below a list is
-  allowed only for things that belong at the end of it (a drop target, a totals line) and
-  only when the list reserves its full height, so the two can never share a pixel.
+  Nothing is anchored over the scroll area. A footer strip below a list is allowed only for
+  things that belong at the end of it (a totals line, a hint) and only when the list
+  reserves its full height, so the two can never share a pixel.
 - A page never overflows its frame. Add up the vertical offsets when you edit a form; if the
-  total exceeds the page height, put the form in a ScrollFrame.
-- Prose above a list has explicit line breaks and a known line count, so the list's top
-  offset is predictable.
+  total exceeds the page height, put the form in a `W.Scroll`.
+- A window opens away from the middle of the screen, keeps its place per character, closes
+  on Escape, and gives the keyboard back when combat starts.
 - Timestamps in lists show relative age (12s, 5m, 3h, 2d). The exact time goes in the tooltip.
-- A button that toggles something shows the current state in its label or colour, and the
-  page refreshes after the click.
+- A button that toggles something shows the current state in its label or kind, and the
+  window refreshes after the click.
 - A toggle that changes which rows a list shows is saved state, not session state. Kept on a
   Lua table it resets on reload, and a list that comes back empty reads as lost data rather
   than as a filter. Say how many rows are being held back, too.
-- Colours follow the User-facing text section: green good or on, red bad or off or vetoed,
-  amber pending or derived, grey missing or finished. One meaning per colour per addon.
-- Build lists with the shared widget library `LibICUI-1.0` (ICLibs) through the addon's own
-  thin wrapper, not with hand-placed FontStrings per tab.
-- Windows, tabs, buttons, edit boxes, multi-line text areas and check buttons come from the
-  same library, so the guild palette is what you get by default. Do not hand-roll a button
-  or paint one with literal colour values; an addon that wants the Blizzard look sets
-  `theme = false` on its registered style instead.
 
 ## Versioning and release
 
 - Semantic-ish: bump patch for fixes, minor for features, major for saved-variable
   schema changes that are not backward compatible.
 - The version appears in three places and must match: `## Version:` in the `.toc`, the
-  `local VERSION` load message in `Core.lua` where the addon has one, and the addon's row
-  in `AddonProjects/<flavor>/README.md`. `scripts/lint.py` checks all three against each
-  other. The packaged zip name is derived from the `.toc` by `scripts/package.ps1`, so it
-  is not a fourth place to keep in step.
+  `local VERSION` in `Core.lua`, and the addon's row in `AddonProjects/forever/README.md`.
+  `scripts/lint.py` checks all three against each other.
+- A Keel library's MINOR goes up whenever its API changes, in the library source and in the
+  Contents table of `Docs/Keel.md` together; `lint.py` fails when the two disagree.
 - Commit messages: imperative subject under 72 characters, a body that says what changed
   for the player and anything a maintainer must know (migrations, new commands).
+- `Docs/releasing.md` has the release steps.
 
 ## Review checklist
 
 - `python scripts/lint.py` is clean.
-- The addon's own cases pass in game: `/<cmd> test`.
+- The addon's cases pass headless (`scripts/run-tests.ps1 -Flavor forever -Addon <Addon>`)
+  and in game (`/<cmd> test`).
 - Loads without errors on the target client with `Load out of date AddOns` off.
 - Every new command is in `help`.
 - Every new wait has a timeout and a visible failure message.
-- No new globals (check with `/dump` or a globals-leak addon).
+- No new globals.
 - Docs updated: the addon's guide in `Docs/` and this file if a convention changed.

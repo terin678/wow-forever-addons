@@ -25,9 +25,9 @@ What it maps:
   \u escapes come back as UTF-8, surrogate pairs included. The reader is lenient where a
   hand-edited file tends to slip (a raw tab inside a string) and strict about structure.
 
-Lifted from Anniversary MarkedForDeath's JSON.lua, which is ours, with three changes: it
-returns a reason instead of writing null for what JSON cannot hold, \u escapes past 255
-are decoded rather than replaced with "?", and a null inside an array keeps its index.
+Three choices worth knowing: it returns a reason instead of writing null for what JSON
+cannot hold, \u escapes past 255 are decoded rather than replaced with "?", and a null
+inside an array keeps its index.
 ]]
 
 local MAJOR, MINOR = "LibKeelJSON-1.0", 1

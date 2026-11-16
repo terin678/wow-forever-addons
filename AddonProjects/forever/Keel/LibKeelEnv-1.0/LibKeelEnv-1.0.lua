@@ -25,7 +25,7 @@ Env answers the question with data and never prints: the caller decides what to 
 
 Wrap is the profiling that is always on: it needs no console variable, costs two clock
 reads a call, and a handler that fires while the game is idle shows up as a call count
-that keeps climbing. Resolve, Has and Probe are lifted from LibICCore-1.0's probe.
+that keeps climbing.
 ]]
 
 local MAJOR, MINOR = "LibKeelEnv-1.0", 2

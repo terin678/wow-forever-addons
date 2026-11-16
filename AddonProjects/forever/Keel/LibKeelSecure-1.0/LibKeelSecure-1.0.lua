@@ -263,7 +263,7 @@ end
 -- Writes a button's macro now, or holds it for the end of combat ("held"; a later write
 -- replaces a held one). The button keeps its last macro until then.
 function Secure.SetMacro(button, text)
-    assert(type(button) == "table", "LibICSecure: SetMacro needs a button")
+    assert(type(button) == "table", "LibKeelSecure: SetMacro needs a button")
     text = text or ""
     Listen()
     if Secure.Locked() then
@@ -281,13 +281,13 @@ end
 -- and never touch the player's saved keys. The set is copied, so changing the table
 -- afterwards changes nothing.
 function Secure.Bind(owner, keys)
-    assert(type(owner) == "table", "LibICSecure: Bind needs an owner frame")
+    assert(type(owner) == "table", "LibKeelSecure: Bind needs an owner frame")
     local set = {}
     for key, target in pairs(keys or {}) do
         local name, mouse = target, "LeftButton"
         if type(target) == "table" then name, mouse = target[1], target[2] or "LeftButton" end
         assert(type(key) == "string" and type(name) == "string" and type(mouse) == "string",
-            "LibICSecure: Bind needs key = buttonName or { buttonName, mouseButton }")
+            "LibKeelSecure: Bind needs key = buttonName or { buttonName, mouseButton }")
         set[key] = { name, mouse }
     end
     Listen()

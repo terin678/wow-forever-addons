@@ -8,7 +8,7 @@ the client loops back, is dropped. A frame the client will not take now (locked 
 throttled) waits in a queue with a time to live.
 
     local Comm = LibStub("LibKeelComm-1.0")
-    local comm = Comm.New("MarkedForDeath", { version = "0.1.0", onDrop = function(entry, reason) end })
+    local comm = Comm.New("MyAddon", { version = "0.1.0", onDrop = function(entry, reason) end })
 
     comm:On("plan", function(msg, from, channel) end)
     comm:Send({ t = "plan", rules = { ... } })     -> the plan: { action, channel, reason }
@@ -142,7 +142,7 @@ function Comm.Newer(a, b)
     return false
 end
 
--- The same budget rule as LibICChat: 0 when another frame may go at now, else seconds.
+-- The same budget rule as LibKeelChat: 0 when another frame may go at now, else seconds.
 local function Wait(times, now, budget)
     local frames, window = budget[1], budget[2]
     local recent = {}
@@ -348,7 +348,7 @@ end
 -- queue again on every restriction change and once a second while it holds a message.
 function Comm.New(prefix, opts)
     assert(type(prefix) == "string" and #prefix > 0 and #prefix <= MAX_PREFIX,
-        "LibICComm: New needs a prefix of 1 to 16 characters")
+        "LibKeelComm: New needs a prefix of 1 to 16 characters")
     opts = opts or {}
     local sender = setmetatable({
         prefix = prefix,

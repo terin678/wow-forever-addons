@@ -14,9 +14,6 @@ headless case and behaves the same on any client the kit is ever loaded on.
     Util.DeepCopy(t)                a copy that shares nothing with the original
     Util.Clamp(n, lo, hi)           n held inside lo..hi
     Util.Move(list, from, to)       reorder one element of a list; returns whether it moved
-
-Trim through DeepCopy are lifted from LibICCore-1.0 (the Anniversary set), where they have
-run for months; Clamp and Move are new here.
 ]]
 
 local MAJOR, MINOR = "LibKeelUtil-1.0", 1
