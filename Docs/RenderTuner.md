@@ -245,7 +245,7 @@ is hard to look at, and put back as they were when you take the pair off.
 
 | Pair | For | What it sets |
 | --- | --- | --- |
-| Snow goggles | A blizzard or a white-out | Brightness 10 lower and Contrast 5 higher than you have them, Bloom off, Full-screen glow off, Weather density 1 |
+| Snow goggles | A blizzard or a white-out | Brightness 10 lower and Contrast 5 higher than you have them, Bloom off, Full-screen glow off, Weather density down to 1 if it was higher |
 
 Three ways to put a pair on or take it off:
 
@@ -258,9 +258,9 @@ Three ways to put a pair on or take it off:
 
 What each setting was is noted when the pair goes on, and that is what comes back, after a
 reload or a restart too. A setting you move yourself while the pair is on is yours: taking
-the pair off leaves it where you put it. While a pair is on the panel counts its settings
-as changed from kept, which they are; avoid **Keep** with goggles on, or the kept set
-becomes the goggles' values.
+the pair off leaves it where you put it. While a pair is on the panel says so beside the upscaling line, and counts the pair's
+settings as changed from kept. **Keep** with goggles on records your settings without
+them, and leaves them on.
 
 ## The frame rate check
 

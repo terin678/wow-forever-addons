@@ -109,7 +109,8 @@ function ns.StatusText()
     local knob = ns.Model.Find(ns.Apply.Knobs(), "RenderScale")
     local scale = live.RenderScale
     local preset = ns.Model.PresetOf(scale, ns.Catalog.PRESETS, ns.Apply.Limits())
-    return ns.Model.Status(knob and ns.Model.Format(knob, scale) or "?", preset, #ns.Changes())
+    local mode = ns.Goggles()
+    return ns.Model.Status(knob and ns.Model.Format(knob, scale) or "?", preset, #ns.Changes(), mode and mode.label)
 end
 
 local function RefreshPanel()
@@ -300,19 +301,20 @@ end
 
 -- Puts a pair of goggles on, taking off any that is on first; nil only takes off. What a
 -- pair changed is noted in settings.goggles, so it comes off the same after a reload.
-function ns.SetGoggles(mode)
+function ns.SetGoggles(mode, quiet)
     local worn = ns.db.settings.goggles
     if worn then
         local was = GogglesByKey(worn.key)
         ns.db.settings.goggles = nil
-        ns.ApplyTarget(ns.Model.GogglesOff(worn.set, worn.before, ns.Apply.Live()), (was and was.label or "Goggles") .. " off")
+        ns.ApplyTarget(ns.Model.GogglesOff(worn.set, worn.before, ns.Apply.Live()), (was and was.label or "Goggles") .. " off", quiet)
     end
     if mode then
         local target, before = ns.Model.GogglesOn(mode, ns.Apply.Live(), ns.Apply.Knobs())
         ns.db.settings.goggles = { key = mode.key, set = target, before = before }
-        ns.ApplyTarget(target, mode.label .. " on")
+        ns.ApplyTarget(target, mode.label .. " on", quiet)
     end
     if ns.Hud then ns.Hud.Refresh() end
+    RefreshPanel()
 end
 
 -- Puts a list of knobs back to their saved values: one group, or what a search found.
@@ -324,9 +326,14 @@ end
 
 -- The game already remembers every change; this only moves the point Revert returns to.
 function ns.Keep()
+    -- Goggles are for a while: what is kept is the settings without them.
+    local mode = ns.Goggles()
+    if mode then ns.SetGoggles(nil, true) end
     local changed = #ns.Changes()
     ns.db.saved = ns.Apply.Live()
-    out.Printf("kept: Revert now returns here (%d %s since the last Keep).", changed, Util.Plural(changed, "change"))
+    if mode then ns.SetGoggles(mode, true) end
+    out.Printf("kept: Revert now returns here (%d %s since the last Keep).%s", changed, Util.Plural(changed, "change"),
+        mode and (" " .. mode.label .. " stay on and are not part of it.") or "")
     RefreshPanel()
 end
 

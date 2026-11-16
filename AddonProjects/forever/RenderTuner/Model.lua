@@ -214,7 +214,8 @@ end
 
 -- Putting a pair on: what to set, and what each of those was before. `set` values are
 -- taken as they are; `shift` moves a slider by an amount from where it is, held inside the
--- slider's own range. A variable this client does not have is left out of both.
+-- slider's own range; `cap` brings a value down and leaves one already at or under it
+-- alone. A variable this client does not have is left out of both.
 function Model.GogglesOn(mode, live, knobs)
     local target, before = {}, {}
     for cvar, value in pairs(mode.set or {}) do
@@ -226,6 +227,11 @@ function Model.GogglesOn(mode, live, knobs)
         local knob = Model.Find(knobs, cvar)
         if knob and live[cvar] ~= nil then
             target[cvar], before[cvar] = Model.Clamp(knob, live[cvar] + by), live[cvar]
+        end
+    end
+    for cvar, most in pairs(mode.cap or {}) do
+        if live[cvar] ~= nil and live[cvar] > most then
+            target[cvar], before[cvar] = most, live[cvar]
         end
     end
     return target, before
@@ -337,22 +343,24 @@ function Model.RestartHint(need)
 end
 
 -- "render scale 67% (Crisp), 2 settings differ from the kept set."
-function Model.Status(scaleText, preset, changed)
+function Model.Status(scaleText, preset, changed, goggles)
     local text = "render scale " .. scaleText
     if preset then text = text .. " (" .. preset.label .. ")" end
+    local worn = goggles and (" " .. goggles .. " are on.") or ""
     if changed == 0 then
-        return text .. ", everything as kept."
+        return text .. ", everything as kept." .. worn
     end
     return string.format("%s, %d %s from the kept set.", text, changed,
-        changed == 1 and "setting differs" or "settings differ")
+        changed == 1 and "setting differs" or "settings differ") .. worn
 end
 
 -- The same, short enough for a title bar: "Upscaling 67% Crisp, 2 changed". It says which
 -- row it is about: the Quality row has a word of its own for every level.
-function Model.Brief(scaleText, preset, changed)
+function Model.Brief(scaleText, preset, changed, goggles)
     local text = "Upscaling " .. scaleText
     if preset then text = text .. " " .. preset.label end
     if changed > 0 then text = text .. string.format(", %d changed", changed) end
+    if goggles then text = text .. ", " .. goggles .. " on" end
     return text
 end
 

@@ -273,7 +273,7 @@ T.Case("Catalog: every pair of goggles sets real knobs, inside their own range",
         keys[mode.key] = true
         T.Eq(type(mode.label) == "string" and type(mode.note) == "string" and type(mode.icon) == "string", true,
             mode.key .. " has a label, a note and an icon")
-        T.Eq(next(mode.set or {}) ~= nil or next(mode.shift or {}) ~= nil, true, mode.key .. " changes something")
+        T.Eq(next(mode.set or {}) ~= nil or next(mode.shift or {}) ~= nil or next(mode.cap or {}) ~= nil, true, mode.key .. " changes something")
         for cvar, value in pairs(mode.set or {}) do
             local knob = Model.Find(Catalog.KNOBS, cvar)
             T.Eq(knob ~= nil, true, cvar .. " is in the catalogue")
@@ -285,6 +285,12 @@ T.Case("Catalog: every pair of goggles sets real knobs, inside their own range",
             T.Eq((mode.set or {})[cvar], nil, cvar .. " is shifted or set, not both")
             T.Eq(by ~= 0, true, cvar .. " moves")
         end
+        for cvar, most in pairs(mode.cap or {}) do
+            local knob = Model.Find(Catalog.KNOBS, cvar)
+            T.Eq(knob ~= nil and knob.kind == "slider", true, cvar .. " is a slider in the catalogue")
+            if knob then T.Eq(Model.Clamp(knob, most), most, cvar .. " is capped at a value it can hold") end
+            T.Eq((mode.set or {})[cvar] == nil and (mode.shift or {})[cvar] == nil, true, cvar .. " is capped only")
+        end
     end
 end)
 
@@ -293,8 +299,12 @@ T.Case("Model.GogglesOn and GogglesOff: note what was, put back only what is sti
         { cvar = "A", kind = "slider", min = 0, max = 100, step = 1 },
         { cvar = "S", kind = "slider", min = 0, max = 100, step = 1 },
     }
-    local mode = { set = { A = 40, B = 0, Missing = 1 }, shift = { S = -10, Gone = 5 } }
-    local target, before = Model.GogglesOn(mode, { A = 50, B = 1, S = 35 }, knobs)
+    local mode = { set = { A = 40, B = 0, Missing = 1 }, shift = { S = -10, Gone = 5 }, cap = { C = 1, D = 1 } }
+    local target, before = Model.GogglesOn(mode, { A = 50, B = 1, S = 35, C = 3, D = 0 }, knobs)
+    T.Eq(target.C, 1, "a cap brings a higher value down")
+    T.Eq(before.C, 3, "and notes it")
+    T.Eq(target.D, nil, "one already under the cap is not touched")
+    T.Eq(before.D, nil, "so there is nothing of it to put back")
     T.Eq(target.A, 40, "what to set")
     T.Eq(before.A, 50, "and what it was")
     T.Eq(target.S, 25, "a shift moves from where the player had it")
@@ -728,6 +738,9 @@ T.Case("Model.Line, Status: lines of text", function()
     T.Eq(Model.Status("80%", nil, 3), "render scale 80%, 3 settings differ from the kept set.", "several")
     T.Eq(Model.Brief("67%", { label = "Crisp" }, 0), "Upscaling 67% Crisp", "short, for a title bar, and about the Upscaling row")
     T.Eq(Model.Brief("80%", nil, 2), "Upscaling 80%, 2 changed", "with what has changed")
+    T.Eq(Model.Brief("80%", nil, 2, "Snow goggles"), "Upscaling 80%, 2 changed, Snow goggles on", "and the goggles that explain it")
+    T.Eq(Model.Status("80%", nil, 0, "Snow goggles"), "render scale 80%, everything as kept. Snow goggles are on.",
+        "the longer line says so too")
     T.True(Model.RestartHint("gx"):find("/tuner restart", 1, true), "a restart hint names the command")
     T.Eq(Model.RestartHint(nil), nil, "no need, no hint")
 end)
@@ -827,8 +840,16 @@ if KEEL_HEADLESS then
             T.Eq(cvars.weatherDensity, "2", "what the player moved meanwhile stays theirs")
             T.Eq(ns.db.settings.goggles, nil, "and the note is gone")
             run("goggles snow")
+            run("keep")
+            T.Eq(ns.db.saved.Brightness, 50, "Keep records the settings without the goggles")
+            T.Eq(cvars.Brightness, "40", "and leaves them on")
+            T.Eq(ns.Goggles(), Catalog.GOGGLES[1], "as the pair they were")
             run("goggles off")
             T.Eq(cvars.Brightness, "50", "off takes off whatever is on")
+            cvars.weatherDensity = "0"
+            run("goggles snow")
+            T.Eq(cvars.weatherDensity, "0", "snowfall already lighter than the cap is left alone")
+            run("goggles off")
         end)
     end)
 
