@@ -321,6 +321,33 @@ T.Case("Model.GogglesOn and GogglesOff: note what was, put back only what is sti
     T.Eq(back.B, 1, "a note with no record of what was set hands everything back")
 end)
 
+T.Case("Model.RingSpot: options spiral out of the icon and fan toward where it faces", function()
+    local x, y, scale, alpha = Model.RingSpot(1, 1, 1, 0)
+    T.Eq(math.floor(x + 0.5), 52, "one option at rest sits straight out the way the ring faces")
+    T.Eq(math.floor(y + 0.5), 0, "and not to either side")
+    T.Eq(scale, 1, "at full size")
+    T.Eq(alpha, 1, "and solid")
+
+    local x0, y0, scale0, alpha0 = Model.RingSpot(1, 1, 0, 0)
+    T.Eq(math.floor(math.sqrt(x0 * x0 + y0 * y0) + 0.5), 6, "it starts at the icon")
+    T.Eq(scale0, 0.5, "small")
+    T.Eq(alpha0, 0, "and unseen")
+    T.Eq(y0 > 0, true, "and round the side, so the way out is a curve")
+
+    local ux = Model.RingSpot(1, 1, 1, math.pi / 2)
+    T.Eq(math.floor(ux + 0.5), 0, "facing up, it goes up")
+
+    local _, ya = Model.RingSpot(1, 3, 1, 0)
+    local _, yb = Model.RingSpot(2, 3, 1, 0)
+    local _, yc = Model.RingSpot(3, 3, 1, 0)
+    T.Eq(math.floor(yb + 0.5), 0, "of three, the middle one is on the facing line")
+    T.Eq(ya > 0 and yc < 0 and math.floor(ya + yc + 0.5) == 0, true, "with one either side, evenly")
+
+    T.Eq(Model.RingProgress(1, 3, 0.25), Model.RingProgress(1, 1, 0.25), "the first option leaves at once")
+    T.Eq(Model.RingProgress(3, 3, 0.25), 0, "the last waits its turn")
+    T.Eq(Model.RingProgress(3, 3, 1), 1, "and all are out when the ring is open")
+end)
+
 T.Case("Catalog: every group is in a cluster, and the presets run from least to most", function()
     local clusters = {}
     for _, cluster in ipairs(Catalog.CLUSTERS) do clusters[cluster.key] = true end

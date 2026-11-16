@@ -250,6 +250,35 @@ function Model.GogglesOff(set, before, live)
 end
 
 --------------------------------------------------------------------------------
+-- The ring of options around the icon on the screen
+--------------------------------------------------------------------------------
+
+-- Pixels from the icon's centre to an option's, at rest and at the start of the way out;
+-- radians between two options, and how far round each swings on its way out.
+local RING = { radius = 52, start = 6, spacing = 0.72, turn = 2.2, stagger = 0.25 }
+
+-- How far out option `index` of `count` is when the ring as a whole is `t` of the way
+-- open (0 to 1). The options leave one after another, the first first.
+function Model.RingProgress(index, count, t)
+    local delay = count > 1 and RING.stagger * (index - 1) / (count - 1) or 0
+    return Util.Clamp((t - delay) / (1 - RING.stagger), 0, 1)
+end
+
+-- Where option `index` of `count` is when it is `p` of the way out: x and y from the
+-- icon's centre, its scale and its alpha. It spirals: the angle unwinds as the radius
+-- grows, fast at first and settling. At rest the options fan out either side of `facing`
+-- (radians, 0 to the right, anticlockwise), which the caller points at the middle of the
+-- screen so an icon at an edge opens inward.
+function Model.RingSpot(index, count, p, facing)
+    p = Util.Clamp(p, 0, 1)
+    local ease = 1 - (1 - p) ^ 3
+    local spacing = math.min(RING.spacing, 2 * math.pi / count)
+    local angle = facing + ((count + 1) / 2 - index) * spacing + RING.turn * (1 - ease)
+    local radius = RING.start + (RING.radius - RING.start) * ease
+    return math.cos(angle) * radius, math.sin(angle) * radius, 0.5 + 0.5 * ease, Util.Clamp(p * 3, 0, 1)
+end
+
+--------------------------------------------------------------------------------
 -- Finding things by what the user typed
 --------------------------------------------------------------------------------
 

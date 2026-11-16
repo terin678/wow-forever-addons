@@ -249,8 +249,10 @@ is hard to look at, and put back as they were when you take the pair off.
 
 Three ways to put a pair on or take it off:
 
-- **The icon on the screen.** A small square at the left edge of the screen. Click it for
-  the goggles; drag it wherever you like. While a pair is on it shows a pair of goggles
+- **The icon on the screen.** A small square at the left edge of the screen. Click it and the
+  goggles spiral out around it; click a pair to put it on or take it off (the one that is
+  on glows), or click the icon again to close the ring. Right-click it for a menu, and drag
+  it wherever you like. While a pair is on it shows a pair of goggles
   instead of the spyglass. `/tuner hud` hides it or brings it back. Its place is kept per
   character.
 - **Right-click RenderTuner in the Addon Compartment**, under the upscaling presets.
