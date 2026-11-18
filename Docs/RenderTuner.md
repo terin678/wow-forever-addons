@@ -37,6 +37,11 @@ with `/keel theme`, where the Impulse Control theme is now called Navy.
 goggles are the first pair: one click for a blizzard, one click to put everything back. See
 [Goggles](#goggles).
 
+**New in 0.7.1 (beta):** nothing in RenderTuner itself; how it is delivered. On CurseForge,
+Keel is no longer inside RenderTuner's download: it is a project of its own that the app
+installs alongside. On Wago and GitHub the download still carries Keel. If the Keel that
+RenderTuner finds is older than it needs, it says so in red at login; update Keel.
+
 ## What the client can and cannot do
 
 The Forever client (1.60.1) has **no DLSS, DLAA, XeSS, or FSR 2 and later**. The client
@@ -55,7 +60,8 @@ does, and it does not look the same.
 ## Install
 
 Extract into `_forever_\Interface\AddOns` so you get `AddOns\RenderTuner\RenderTuner.toc`.
-RenderTuner needs **Keel**, which goes beside it (`AddOns\Keel`). Restart the client after
+RenderTuner needs **Keel**, which goes beside it (`AddOns\Keel`): the CurseForge app installs
+it with RenderTuner, and the Wago and GitHub downloads have it inside. Restart the client after
 installing; a `/reload` does not pick up a new addon.
 
 ## Some settings can crash the game

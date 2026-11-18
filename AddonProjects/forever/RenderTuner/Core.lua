@@ -29,7 +29,7 @@ Nothing here runs while the game is idle: the addon acts on a command, a click o
 drag, and at login.
 ]]
 
-local VERSION = "0.7.0"
+local VERSION = "0.7.1-beta.1"
 
 local Util = LibStub("LibKeelUtil-1.0")
 local Test = LibStub("LibKeelTest-1.0")
@@ -49,8 +49,19 @@ ns.Tests = Test.New({ print = out.Print })
 -- Pure: what it says at login
 --------------------------------------------------------------------------------
 
-function ns.LoadLines(version, status)
-    return { string.format("v%s loaded: %s /tuner opens the panel.", version, status) }
+-- The Keel libraries this version was tested with, where that is past a library's first.
+-- Keel is installed and updated on its own, so the one found may be older than these.
+local NEEDS = { ["LibKeelWidgets-1.0"] = 5, ["LibKeelTheme-1.0"] = 2, ["LibKeelEnv-1.0"] = 2 }
+
+-- `older` is the libraries found older than needed (Model.OlderLibs). It is said, and
+-- loading goes on: most of the addon works against an older Keel.
+function ns.LoadLines(version, status, older)
+    local lines = { string.format("v%s loaded: %s /tuner opens the panel.", version, status) }
+    if older and #older > 0 then
+        lines[#lines + 1] = string.format("|cffff4444Keel is older than this RenderTuner needs (%s).|r Update Keel.",
+            table.concat(older, ", "))
+    end
+    return lines
 end
 
 --------------------------------------------------------------------------------
@@ -654,7 +665,8 @@ frame:SetScript("OnEvent", Env.Wrap("RenderTuner events", function(_, event)
         ns.Baseline()
         if ns.Launcher then ns.Launcher.Create() end
         if ns.Hud then ns.Hud.Create() end
-        for _, line in ipairs(ns.LoadLines(VERSION, ns.StatusText())) do out.Print(line) end
+        local older = ns.Model.OlderLibs(NEEDS, function(name) return select(2, LibStub:GetLibrary(name, true)) end)
+        for _, line in ipairs(ns.LoadLines(VERSION, ns.StatusText(), older)) do out.Print(line) end
         if ns.Check then ns.Check.Login() end
     end
     if slashTaken then

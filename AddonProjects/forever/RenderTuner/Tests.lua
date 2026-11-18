@@ -776,6 +776,18 @@ end)
 -- Core
 --------------------------------------------------------------------------------
 
+T.Case("OlderLibs and LoadLines: a Keel older than needed is said at login, and only then", function()
+    local have = { A = 5, B = 1 }
+    local older = Model.OlderLibs({ A = 5, B = 2, C = 1 }, function(name) return have[name] end)
+    T.Eq(table.concat(older, " "), "B C", "the older and the missing, sorted; one that is new enough is not named")
+    T.Eq(#Model.OlderLibs({ A = 4 }, function(name) return have[name] end), 0, "a newer library is fine")
+
+    local lines = ns.LoadLines("0.1.0", "status.", older)
+    T.Eq(#lines, 2, "one more line")
+    T.Eq(lines[2]:find("Keel is older than this RenderTuner needs (B, C)", 1, true) ~= nil, true, "naming them")
+    T.Eq(#ns.LoadLines("0.1.0", "status.", {}), 1, "nothing older, nothing said")
+end)
+
 T.Case("LoadLines: the version and where things stand", function()
     T.Eq(ns.LoadLines("0.1.0", "render scale 67% (Crisp), everything as kept.")[1],
         "v0.1.0 loaded: render scale 67% (Crisp), everything as kept. /tuner opens the panel.", "one line")
