@@ -2,7 +2,7 @@
 ## Title: Keel
 ## Notes: The shared libraries under RenderTuner and Stickies for WoW Forever: small ones, added one layer at a time.
 ## Author: Malexis
-## Version: 0.14.0
+## Version: 0.15.0-beta.1
 ## IconTexture: Interface\Icons\INV_Misc_Gear_01
 ## Category: Libraries
 ## SavedVariables: KeelDB
