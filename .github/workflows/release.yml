@@ -132,14 +132,15 @@ jobs:
             '{changelog: $c, changelogType: "markdown", displayName: $n, gameVersions: $g, releaseType: $t}
              + (if $r == "" then {} else {relations: {projects: [{slug: $r, type: "requiredDependency"}]}} end)')
           # --form-string, not -F: -F cuts a value at its first semicolon, and a changelog has them.
-          curl -fsS -H "X-Api-Token: $CF_API_TOKEN" --form-string "metadata=$meta" -F "file=@$CF_ZIP" \
+          curl --fail-with-body -sS -H "X-Api-Token: $CF_API_TOKEN" --form-string "metadata=$meta" -F "file=@$CF_ZIP" \
             "https://wow.curseforge.com/api/projects/$CF_PROJECT_ID/upload-file"
 
       - name: Wago
-        if: ${{ env.WAGO_API_TOKEN != '' && (github.event_name == 'push' || inputs.wago) }}
+        # Runs once there is a zip, whatever CurseForge said: one store's refusal is not the other's.
+        if: ${{ !cancelled() && env.ZIP != '' && env.WAGO_API_TOKEN != '' && (github.event_name == 'push' || inputs.wago) }}
         run: |
           [ -n "$WAGO_PROJECT_ID" ] || { echo "$ADDON has no Wago project id set; skipped"; exit 0; }
           meta=$(jq -n --rawfile c notes.md --arg l "$VERSION" --arg s "$([ "$CHANNEL" = release ] && echo stable || echo "$CHANNEL")" \
             '{label: $l, stability: $s, changelog: $c, supported_forever_patch: "1.60.1"}')
-          curl -fsS -H "Authorization: Bearer $WAGO_API_TOKEN" -H "Accept: application/json" \
+          curl --fail-with-body -sS -H "Authorization: Bearer $WAGO_API_TOKEN" -H "Accept: application/json" \
             --form-string "metadata=$meta" -F "file=@$ZIP" "https://addons.wago.io/api/projects/$WAGO_PROJECT_ID/version"
