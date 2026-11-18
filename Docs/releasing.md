@@ -6,7 +6,7 @@ Pushing a tag publishes one addon to GitHub, CurseForge and Wago. The workflow i
 
 | Tag | Publishes | In the zip |
 | --- | --- | --- |
-| `rendertuner-v<version>` | RenderTuner | RenderTuner and Keel, or RenderTuner alone once `KEEL_CF_SLUG` is set |
+| `rendertuner-v<version>` | RenderTuner | RenderTuner and Keel |
 | `keel-v<version>` | Keel | Keel |
 
 ## To release
@@ -36,16 +36,30 @@ The stable release is the same code with the suffix taken off and a new tag.
 
 ## Keel as a project of its own
 
-RenderTuner's zip carries Keel until the variable `KEEL_CF_SLUG` is set. From then on it
-ships alone and names Keel as a required dependency on CurseForge; on Wago the dependency
-is set by hand on RenderTuner's project page. The order that breaks nobody:
+Today RenderTuner's zip carries Keel on every store. Planned, and not in the workflow yet:
+the packaging splits by store. On CurseForge RenderTuner ships alone and names Keel (slug
+`keel`) as a required dependency. On Wago and GitHub Keel stays inside RenderTuner's zip,
+because Wago has no way we could find to declare a dependency.
 
-1. Create Keel's projects on both stores; set `KEEL_CF_PROJECT_ID` and `KEEL_WAGO_PROJECT_ID`.
-2. Release Keel as a beta (`keel-v<version>-beta.1`) and install it from each store app.
-3. Set `KEEL_CF_SLUG`, and release RenderTuner as a beta. Check that a clean install from
-   each app brings Keel with it.
-4. Release Keel stable, and only then RenderTuner stable. A stable RenderTuner without Keel
+Leave the variable `KEEL_CF_SLUG` unset. As the workflow stands, setting it takes Keel out
+of RenderTuner's zip on every store, Wago included; the switch is to move into
+`RenderTuner.toc` with the split above.
+
+Keel's beta goes to CurseForge only at first: `KEEL_WAGO_PROJECT_ID` is unset on purpose
+(the project is `rNkgbeNa`), until a Keel from Wago beside the one inside RenderTuner's Wago
+zip has been tried.
+
+The order that breaks nobody:
+
+1. Release Keel as a beta (`keel-v<version>-beta.1`) and install it from the CurseForge app.
+2. Release RenderTuner as a beta without Keel in its CurseForge zip. Check that a clean
+   install from the app brings Keel with it.
+3. Release Keel stable, and only then RenderTuner stable. A stable RenderTuner without Keel
    in it, while Keel is still a beta, loads for nobody on the stable channel.
+
+While `main` holds a beta Keel, no stable `rendertuner-v` tag is cut from `main`: its zip
+would carry that beta. An urgent RenderTuner fix is tagged from a hotfix branch off the
+last stable release (`rendertuner-v0.7.0`, with Keel 0.14.0 inside).
 
 If a release gets part of the way (GitHub done, a store refused), mend what was wrong on
 `main` and publish the same tag again, without moving it:
@@ -74,7 +88,7 @@ nothing, before reaching for compression.
 | `WAGO_PROJECT_ID` | variable | RenderTuner: the project's id on the Wago developer dashboard |
 | `KEEL_CF_PROJECT_ID` | variable | Keel: the same number on its CurseForge page |
 | `KEEL_WAGO_PROJECT_ID` | variable | Keel: the same id on the Wago developer dashboard |
-| `KEEL_CF_SLUG` | variable | Keel: the last part of its CurseForge page's address. Setting it takes Keel out of RenderTuner's zip; see above |
+| `KEEL_CF_SLUG` | variable | Leave unset; see "Keel as a project of its own" |
 | `CF_GAME_VERSION_IDS` | variable | Optional. CurseForge ids to use instead of looking up the game version named 1.60.1 (set `CF_GAME_VERSION` to look up another name) |
 
 A store whose token is not set, or an addon whose project id for that store is not set, is
