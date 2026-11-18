@@ -109,5 +109,5 @@ Prefer changes that fail loudly in chat over ones that fail silently.
 3. `main` only accepts pull requests: `gh pr create`, then `gh pr merge --merge`. Never
    squash: each commit is written to stand on its own so a single change can be found and
    reverted on its own.
-4. A release is a tag on `main` (`rendertuner-v<version>`), whose message is the changelog;
+4. A release is a tag on `main` (`rendertuner-v<version>` or `keel-v<version>`), whose message is the changelog;
    the workflow publishes it.
