@@ -51,7 +51,6 @@ jobs:
           RENDERTUNER_WAGO: ${{ vars.WAGO_PROJECT_ID }}
           KEEL_CF: ${{ vars.KEEL_CF_PROJECT_ID }}
           KEEL_WAGO: ${{ vars.KEEL_WAGO_PROJECT_ID }}
-          KEEL_SLUG: ${{ vars.KEEL_CF_SLUG }}
         # One row per addon: its folder, what goes in the zip, and its project on each store.
         run: |
           case "$TAG" in
@@ -63,10 +62,15 @@ jobs:
           toc=$(sed -n 's/^## Version:[[:space:]]*//p' "AddonProjects/forever/$addon/$addon.toc" | tr -d '\r')
           [ "$version" = "$toc" ] || { echo "tag says $version, $addon.toc says $toc"; exit 1; }
           case "$version" in *-alpha*) channel=alpha ;; *-beta*) channel=beta ;; *) channel=release ;; esac
-          # Once Keel has a project of its own (KEEL_CF_SLUG is set), RenderTuner ships without
-          # it and names it as required instead.
-          requires=""
-          if [ "$addon" = RenderTuner ] && [ -n "$KEEL_SLUG" ]; then folders=RenderTuner; requires="$KEEL_SLUG"; fi
+          # A .toc that names a CurseForge project it requires ships there alone, with that
+          # project as a required dependency. The other stores cannot carry a dependency, so
+          # their zip keeps everything in `folders`.
+          requires=$(sed -n 's/^## X-CurseForge-Requires:[[:space:]]*//p' "AddonProjects/forever/$addon/$addon.toc" | tr -d '\r')
+          # A stable release that leaves Keel to CurseForge needs a stable Keel there to fetch.
+          git fetch --tags --force --quiet
+          if [ -n "$requires" ] && [ "$channel" = release ] && ! git tag -l 'keel-v*' | grep -Evq -- '-(alpha|beta)'; then
+            echo "a stable $addon without Keel inside needs a stable keel-v tag first"; exit 1
+          fi
           {
             echo "ADDON=$addon"
             echo "FOLDERS=$folders"
@@ -88,6 +92,13 @@ jobs:
           zip="$ADDON-$VERSION-forever.zip"
           (cd AddonProjects/forever && zip -rq "$GITHUB_WORKSPACE/$zip" $FOLDERS)
           echo "ZIP=$zip" >> "$GITHUB_ENV"
+          # CurseForge's zip: the addon alone when it names what it requires there.
+          cfzip="$zip"
+          if [ -n "$REQUIRES" ]; then
+            cfzip="$ADDON-$VERSION-curseforge.zip"
+            (cd AddonProjects/forever && zip -rq "$GITHUB_WORKSPACE/$cfzip" "$ADDON")
+          fi
+          echo "CF_ZIP=$cfzip" >> "$GITHUB_ENV"
           # The tag's message is the changelog; fetching again keeps an annotated tag's text.
           git fetch --tags --force --quiet
           notes=$(git for-each-ref "refs/tags/$TAG" --format='%(contents)')
@@ -121,7 +132,7 @@ jobs:
             '{changelog: $c, changelogType: "markdown", displayName: $n, gameVersions: $g, releaseType: $t}
              + (if $r == "" then {} else {relations: {projects: [{slug: $r, type: "requiredDependency"}]}} end)')
           # --form-string, not -F: -F cuts a value at its first semicolon, and a changelog has them.
-          curl -fsS -H "X-Api-Token: $CF_API_TOKEN" --form-string "metadata=$meta" -F "file=@$ZIP" \
+          curl -fsS -H "X-Api-Token: $CF_API_TOKEN" --form-string "metadata=$meta" -F "file=@$CF_ZIP" \
             "https://wow.curseforge.com/api/projects/$CF_PROJECT_ID/upload-file"
 
       - name: Wago

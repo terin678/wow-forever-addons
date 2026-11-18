@@ -279,6 +279,21 @@ function Model.RingSpot(index, count, p, facing)
 end
 
 --------------------------------------------------------------------------------
+-- The libraries it stands on
+--------------------------------------------------------------------------------
+
+-- The names in `needs` (library name -> the MINOR needed) whose library is older, sorted.
+-- `minorOf(name)` is the MINOR that is loaded, or nil for a library that is not there.
+function Model.OlderLibs(needs, minorOf)
+    local older = {}
+    for name, minor in pairs(needs) do
+        if (tonumber(minorOf(name)) or 0) < minor then older[#older + 1] = name end
+    end
+    table.sort(older)
+    return older
+end
+
+--------------------------------------------------------------------------------
 -- Finding things by what the user typed
 --------------------------------------------------------------------------------
 

@@ -29,14 +29,18 @@ A few settings are marked **experimental** in the panel: dynamic render scale, H
 
 - **Commands:** `/tuner` opens the panel. `/tuner preset crisp`, `/tuner auto`, `/tuner undo`, `/tuner keep` and `/tuner revert` do what the buttons do. `/tuner help` lists the rest.
 - **Also opens from** the addon list beside the minimap (right-click it for the upscaling presets) and from a key you bind under Options, Keybindings, AddOns.
-- **Keel is included.** The download has both folders, RenderTuner and Keel. Keep them side by side in `Interface\AddOns`.
+- **RenderTuner needs Keel**, a small library addon, beside it in `Interface\AddOns`. On CurseForge the app installs Keel with it; the downloads from Wago and GitHub have both folders inside.
 - **In the AddOns list** it sits under a Graphics heading.
 - **Some changes need a restart.** Multisampling and HDR need the graphics engine restarted, which RenderTuner offers to do. One of Extreme's settings needs the game restarted, and it says so.
 
+## New in 0.7.1 (beta)
+
+- A change in how RenderTuner is delivered, not in what it does. On CurseForge, Keel is no longer inside RenderTuner's download: it is a project of its own, and the app installs it alongside. On Wago and GitHub the download still carries Keel.
+- RenderTuner says so at login if the Keel it finds is older than it needs.
+
 ## New in 0.7.0
 
-- Goggles: a few settings changed together for a while and put back with one click. Snow goggles are the first pair, for a blizzard or a white-out: a slightly darker picture, no bloom or glow, lighter snowfall.
-- An icon on the screen. Click it and the goggles spiral out around it; click a pair to put it on or take it off, and click the icon again to put them away. Drag it anywhere; `/tuner hud` hides it.
-- Also in the Addon Compartment's right-click menu, and as `/tuner goggles`.
+- Goggles: a few settings changed together for a while and put back with one click. Snow goggles are the first pair, for a blizzard or a white-out.
+- An icon on the screen. Click it and the goggles spiral out around it; click a pair to put it on or take it off, and click the icon again to put them away.
 
 Made by Malexis. Source and full documentation: https://github.com/terin678/wow-forever-addons

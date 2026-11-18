@@ -6,7 +6,7 @@ Pushing a tag publishes one addon to GitHub, CurseForge and Wago. The workflow i
 
 | Tag | Publishes | In the zip |
 | --- | --- | --- |
-| `rendertuner-v<version>` | RenderTuner | RenderTuner and Keel |
+| `rendertuner-v<version>` | RenderTuner | RenderTuner alone on CurseForge; RenderTuner and Keel on Wago and GitHub |
 | `keel-v<version>` | Keel | Keel |
 
 ## To release
@@ -36,14 +36,18 @@ The stable release is the same code with the suffix taken off and a new tag.
 
 ## Keel as a project of its own
 
-Today RenderTuner's zip carries Keel on every store. Planned, and not in the workflow yet:
-the packaging splits by store. On CurseForge RenderTuner ships alone and names Keel (slug
-`keel`) as a required dependency. On Wago and GitHub Keel stays inside RenderTuner's zip,
-because Wago has no way we could find to declare a dependency.
+The packaging splits by store. On CurseForge RenderTuner ships alone and names Keel as a
+required dependency. On Wago and GitHub Keel stays inside RenderTuner's zip, because Wago
+has no way we could find to declare a dependency.
 
-Leave the variable `KEEL_CF_SLUG` unset. As the workflow stands, setting it takes Keel out
-of RenderTuner's zip on every store, Wago included; the switch is to move into
-`RenderTuner.toc` with the split above.
+The switch is a line in `RenderTuner.toc`, so it travels with the code that is tagged:
+
+    ## X-CurseForge-Requires: keel
+
+With it, the CurseForge zip is the addon alone and the value is the slug of the project it
+requires. Without it, every zip carries Keel, as RenderTuner 0.7.0 does. The workflow
+refuses a stable release that has the line until a stable `keel-v` tag exists, since the
+CurseForge app would have no stable Keel to fetch.
 
 Keel's beta goes to CurseForge only at first: `KEEL_WAGO_PROJECT_ID` is unset on purpose
 (the project is `rNkgbeNa`), until a Keel from Wago beside the one inside RenderTuner's Wago
@@ -88,7 +92,6 @@ nothing, before reaching for compression.
 | `WAGO_PROJECT_ID` | variable | RenderTuner: the project's id on the Wago developer dashboard |
 | `KEEL_CF_PROJECT_ID` | variable | Keel: the same number on its CurseForge page |
 | `KEEL_WAGO_PROJECT_ID` | variable | Keel: the same id on the Wago developer dashboard |
-| `KEEL_CF_SLUG` | variable | Leave unset; see "Keel as a project of its own" |
 | `CF_GAME_VERSION_IDS` | variable | Optional. CurseForge ids to use instead of looking up the game version named 1.60.1 (set `CF_GAME_VERSION` to look up another name) |
 
 A store whose token is not set, or an addon whose project id for that store is not set, is
