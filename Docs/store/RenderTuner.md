@@ -33,7 +33,7 @@ A few settings are marked **experimental** in the panel: dynamic render scale, H
 - **In the AddOns list** it sits under a Graphics heading.
 - **Some changes need a restart.** Multisampling and HDR need the graphics engine restarted, which RenderTuner offers to do. One of Extreme's settings needs the game restarted, and it says so.
 
-## New in 0.7.1 (beta)
+## New in 0.7.1
 
 - A change in how RenderTuner is delivered, not in what it does. On CurseForge, Keel is no longer inside RenderTuner's download: it is a project of its own, and the app installs it alongside. On Wago and GitHub the download still carries Keel.
 - RenderTuner says so at login if the Keel it finds is older than it needs.

@@ -37,7 +37,7 @@ with `/keel theme`, where the Impulse Control theme is now called Navy.
 goggles are the first pair: one click for a blizzard, one click to put everything back. See
 [Goggles](#goggles).
 
-**New in 0.7.1 (beta):** nothing in RenderTuner itself; how it is delivered. On CurseForge,
+**New in 0.7.1:** nothing in RenderTuner itself; how it is delivered. On CurseForge,
 Keel is no longer inside RenderTuner's download: it is a project of its own that the app
 installs alongside. On Wago and GitHub the download still carries Keel. If the Keel that
 RenderTuner finds is older than it needs, it says so in red at login; update Keel.

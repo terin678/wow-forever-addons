@@ -30,7 +30,7 @@ says, it says here.
     Tests.lua     the kit's own cases
 ]]
 
-local VERSION = "0.15.0-beta.1"
+local VERSION = "1.0.0"
 
 local Util = LibStub("LibKeelUtil-1.0")
 local Test = LibStub("LibKeelTest-1.0")
